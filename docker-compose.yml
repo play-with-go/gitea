@@ -1,0 +1,43 @@
+version: "3"
+
+networks:
+  gitea:
+    external: false
+
+services:
+  nginx:
+    image: nginx:1.18.0
+    container_name: playwithgodev_nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.sh:/run.sh:ro
+    command: ["/run.sh"]
+    networks:
+      gitea:
+        aliases:
+          - play-with-go.dev
+    ports:
+      - "22:22"
+      - "80:80"
+      - "443:443"
+    environment:
+      - PLAYWITHGODEV_CERT_FILE
+      - PLAYWITHGODEV_KEY_FILE
+
+  gitea:
+    image: gitea/gitea:1.11.5
+    container_name: playwithgodev_gitea
+    networks:
+      gitea:
+        aliases:
+          - giteaserver
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - PLAYWITHGODEV_GITHUB_USER
+      - PLAYWITHGODEV_GITHUB_PAT
+    restart: always
+    volumes:
+      - ./gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
