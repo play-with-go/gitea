@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -111,7 +110,8 @@ func (r *runner) runPre(args []string) error {
 	}
 	var err error
 	_, err = r.client.CreateOrg(gitea.CreateOrgOption{
-		UserName: UserGuidesRepo,
+		UserName:   UserGuidesRepo,
+		Visibility: "private",
 	})
 	check(err, "failed to create %v organisation: %v", UserGuidesRepo, err)
 	return nil
@@ -121,8 +121,8 @@ func (r *runner) runNewUser(args []string) error {
 	if err := r.newUserCmd.fs.Parse(args); err != nil {
 		return r.newUserCmd.usageErr("failed to parse flags: %v", err)
 	}
-	// Get IP address of play-with-go host
-	// ip := r.getIPOfPlayWithGo()
+	// Tidy up old repos
+	r.removeOldRepos()
 
 	// User account -> username (gitea)
 	user := r.createUser()
@@ -189,13 +189,28 @@ git commit -am 'Initial commit'
 	return nil
 }
 
-func (r *runner) getIPOfPlayWithGo() string {
-	addr, err := net.LookupIP("play-with-go.dev")
-	check(err, "failed to lookup IP address of play-with-go.dev: %v", err)
-	if len(addr) != 1 {
-		raise("found %v IP addresses for play-with-go.dev; expected 1", len(addr))
+func (r *runner) removeOldRepos() {
+	opt := gitea.ListReposOptions{
+		ListOptions: gitea.ListOptions{
+			PageSize: 10,
+		},
 	}
-	return addr[0].String()
+	now := time.Now()
+	for {
+		repos, err := r.client.ListUserRepos(UserGuidesRepo, opt)
+		check(err, "failed to list repos: %v", err)
+		for _, repo := range repos {
+			if delta := now.Sub(repo.Created); delta > 3*time.Hour {
+				err := r.client.DeleteRepo(UserGuidesRepo, repo.Name)
+				check(err, "failed to delete repo %v/%v: %v", UserGuidesRepo, repo.Name, err)
+				fmt.Fprintf(os.Stderr, "deleted repo %v/%v (was %v old)\n", UserGuidesRepo, repo.Name, delta)
+			}
+		}
+		if len(repos) < opt.PageSize {
+			break
+		}
+		opt.Page++
+	}
 }
 
 func (r *runner) createUser() *gitea.User {
