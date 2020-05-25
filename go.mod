@@ -7,6 +7,6 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/kr/pretty v0.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/retry.v1 v1.0.3
+	mvdan.cc/dockexec v0.0.0-20200525133310-74f6643d8839
 )
