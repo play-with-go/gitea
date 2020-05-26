@@ -4,6 +4,10 @@ networks:
   gitea:
     external: false
 
+volumes:
+  gitea:
+    driver: local
+
 services:
   nginx:
     image: nginx:1.18.0
@@ -17,8 +21,6 @@ services:
         aliases:
           - play-with-go.dev
     ports:
-      - "22:22"
-      - "80:80"
       - "443:443"
     environment:
       - PLAYWITHGODEV_CERT_FILE
@@ -38,6 +40,7 @@ services:
       - PLAYWITHGODEV_GITHUB_PAT
     restart: always
     volumes:
-      - ./gitea:/data
+      - ./app.ini:/data/gitea/conf/app.ini:ro
+      - gitea:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
