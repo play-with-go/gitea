@@ -38,7 +38,6 @@ services:
       - USER_GID=1000
       - PLAYWITHGODEV_GITHUB_USER
       - PLAYWITHGODEV_GITHUB_PAT
-    restart: always
     volumes:
       - ./app.ini:/data/gitea/conf/app.ini:ro
       - gitea:/data
