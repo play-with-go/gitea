@@ -117,37 +117,8 @@ func (r *runner) runPre(args []string) error {
 	return nil
 }
 
-func (r *runner) runNewUser(args []string) error {
-	if err := r.newUserCmd.fs.Parse(args); err != nil {
-		return r.newUserCmd.usageErr("failed to parse flags: %v", err)
-	}
-	// Tidy up old repos
-	r.removeOldRepos()
-
-	// User account -> username (gitea)
-	user := r.createUser()
-
-	priv, pub := r.createUserSSHKey()
-
-	// ssh-key (upload to gitea)
-	r.setUserSSHKey(user, pub)
-
-	// Create gitea repository in userguides
-	repo := r.createUserRepo(user)
-
-	// Add user as a collab on that repo
-	r.addUserCollabRepo(repo, user)
-
-	// Add mirroring to repository
-	r.addRepoMirrorHook(repo)
-
-	// create GitHub repository
-	r.createGitHubRepo(user)
-
-	// Scan ssh host and trust
-	keyScan := r.keyScan()
-
-	t := template.Must(template.New("out").Parse(`
+var bashTemplate = template.Must(template.New("bashTemplate").Parse(`
+#!/usr/bin/env bash
 umask 0077
 cd ~/
 mkdir .ssh
@@ -176,6 +147,38 @@ EOD
 git add -A
 git commit -am 'Initial commit'
 `[1:]))
+
+func (r *runner) runNewUser(args []string) error {
+	if err := r.newUserCmd.fs.Parse(args); err != nil {
+		return r.newUserCmd.usageErr("failed to parse flags: %v", err)
+	}
+	// Tidy up old repos
+	r.removeOldRepos()
+	r.removeOldUsers()
+
+	// User account -> username (gitea)
+	user := r.createUser()
+
+	priv, pub := r.createUserSSHKey()
+
+	// ssh-key (upload to gitea)
+	r.setUserSSHKey(user, pub)
+
+	// Create gitea repository in userguides
+	repo := r.createUserRepo(user)
+
+	// Add user as a collab on that repo
+	r.addUserCollabRepo(repo, user)
+
+	// Add mirroring to repository
+	r.addRepoMirrorHook(repo)
+
+	// create GitHub repository
+	r.createGitHubRepo(user)
+
+	// Scan ssh host and trust
+	keyScan := r.keyScan()
+
 	vals := struct {
 		PrivKey  string
 		PubKey   string
@@ -183,8 +186,8 @@ git commit -am 'Initial commit'
 		Username string
 	}{priv, pub, keyScan, user.UserName}
 
-	err := t.Execute(os.Stdout, vals)
-	check(err, "failed to execute template: %v", err)
+	err := bashTemplate.Execute(os.Stdout, vals)
+	check(err, "failed to execute bash template: %v", err)
 
 	return nil
 }
@@ -207,6 +210,30 @@ func (r *runner) removeOldRepos() {
 			}
 		}
 		if len(repos) < opt.PageSize {
+			break
+		}
+		opt.Page++
+	}
+}
+
+func (r *runner) removeOldUsers() {
+	opt := gitea.AdminListUsersOptions{
+		ListOptions: gitea.ListOptions{
+			PageSize: 10,
+		},
+	}
+	now := time.Now()
+	for {
+		users, err := r.client.AdminListUsers(opt)
+		check(err, "failed to list users: %v", err)
+		for _, user := range users {
+			if delta := now.Sub(user.Created); delta > 3*time.Hour {
+				err := r.client.AdminDeleteUser(user.UserName)
+				check(err, "failed to delete user %v: %v", user.UserName, err)
+				fmt.Fprintf(os.Stderr, "deleted user %v (was %v old)\n", user.UserName, delta)
+			}
+		}
+		if len(users) < opt.PageSize {
 			break
 		}
 		opt.Page++
@@ -279,11 +306,27 @@ func (r *runner) addUserCollabRepo(repo *gitea.Repository, user *gitea.User) {
 	check(err, "failed to add user as collaborator: %v", err)
 }
 
+var gitHookTemplate = template.Must(template.New("t").Parse(`
+#!/bin/bash
+tf=$(mktemp)
+trap "rm $tf" EXIT
+git push --mirror https://{{.User}}:{{.Password}}@github.com/userguides/{{.Repo}}.git > $tf 2>&1 || { cat $tf && false; }
+`[1:]))
+
 func (r *runner) addRepoMirrorHook(repo *gitea.Repository) {
+	var err error
+	var hook bytes.Buffer
+	vals := struct {
+		User     string
+		Password string
+		Repo     string
+	}{os.Getenv(EnvGithubUser), os.Getenv(EnvGithubPAT), repo.Name}
+	err = gitHookTemplate.Execute(&hook, vals)
+	check(err, "failed to execute git hook template: %v", err)
 	args := gitea.EditGitHookOption{
-		Content: fmt.Sprintf("#!/bin/bash\ngit push --mirror https://%v:%v@github.com/userguides/%v.git", os.Getenv(EnvGithubUser), os.Getenv(EnvGithubPAT), repo.Name),
+		Content: hook.String(),
 	}
-	err := r.client.EditRepoGitHook(UserGuidesRepo, repo.Name, "post-receive", args)
+	err = r.client.EditRepoGitHook(UserGuidesRepo, repo.Name, "post-receive", args)
 	check(err, "failed to edit repo git hook: %v", err)
 }
 
