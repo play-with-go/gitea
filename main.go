@@ -219,7 +219,7 @@ func (r *runner) createUser() *gitea.User {
 	start := time.Date(2019, time.December, 19, 12, 00, 0, 0, time.UTC)
 	for i := 0; i < 3; i++ {
 		now := time.Now()
-		diff := (now.UnixNano() - start.UnixNano()) / 1000
+		diff := (now.UnixNano() - start.UnixNano()) / 1000000
 		bs := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutVarint(bs, diff)
 		var buf bytes.Buffer
@@ -227,7 +227,7 @@ func (r *runner) createUser() *gitea.User {
 		if _, err := enc.Write(bs[:n]); err != nil {
 			panic(err)
 		}
-		username := fmt.Sprintf("user%v", buf.String())
+		username := fmt.Sprintf("user%vu", buf.String())
 		args := gitea.CreateUserOption{
 			Username: username,
 			Email:    username + "@play-with-go.dev",
