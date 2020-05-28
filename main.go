@@ -6,8 +6,10 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -140,15 +142,19 @@ cat <<EOD > ~/.gitconfig
   email = {{.Username}}@play-with-go.dev
 EOD
 cat <<EOD > ~/.netrc
-machine play-with-go.dev login {{.Username}} password {{.Password}}
+machine play-with-go.dev login {{.GiteaUsername}} password {{.Password}}
 EOD
-git clone https://play-with-go.dev/userguides/{{.Username}}.git
-cd {{.Username}}
-cat <<EOD > README
+`[1:]))
+
+var testTemplate = template.Must(template.New("bashTemplate").Parse(`
+git clone https://play-with-go.dev/userguides/{{index .Repos 0}}
+cd {{index .Repos 0}}
+cat <<EOD > README.md
 This is a test
 EOD
 git add -A
 git commit -am 'Initial commit'
+git push
 `[1:]))
 
 type userPassword struct {
@@ -159,6 +165,25 @@ type userPassword struct {
 func (r *runner) runNewUser(args []string) error {
 	if err := r.newUserCmd.fs.Parse(args); err != nil {
 		return r.newUserCmd.usageErr("failed to parse flags: %v", err)
+	}
+	args = r.newUserCmd.fs.Args()
+	var mode string
+	switch len(args) {
+	case 0:
+		mode = "out"
+	case 1:
+		mode = args[0]
+	default:
+		return r.newUserCmd.usageErr("too many arguments; expected at most 1")
+	}
+	switch mode {
+	case "out":
+		if *r.newUserCmd.fTest {
+			raise("-test can only be supplied in raw mode")
+		}
+	case "raw":
+	default:
+		return r.newUserCmd.usageErr("unknown command %v", mode)
 	}
 	// Tidy up old repos
 	r.removeOldRepos()
@@ -173,30 +198,69 @@ func (r *runner) runNewUser(args []string) error {
 	r.setUserSSHKey(user, pub)
 
 	// Create gitea repository in userguides
-	repo := r.createUserRepo(user)
+	repos := r.createUserRepos(user, *r.newUserCmd.fNumRepos)
 
 	// Add user as a collab on that repo
-	r.addUserCollabRepo(repo, user)
+	r.addUserCollabRepos(repos, user)
 
 	// Add mirroring to repository
-	r.addRepoMirrorHook(repo)
+	r.addReposMirrorHook(repos)
 
 	// create GitHub repository
-	r.createGitHubRepo(user)
+	r.createGitHubRepo(repos)
 
 	// Scan ssh host and trust
 	keyScan := r.keyScan()
 
 	vals := struct {
-		PrivKey  string
-		PubKey   string
-		KeyScan  string
-		Username string
-		Password string
-	}{priv, pub, keyScan, user.UserName, user.password}
+		PrivKey       string
+		PubKey        string
+		KeyScan       string
+		Username      string
+		GiteaUsername string
+		Password      string
+		Repos         []string
+	}{priv, pub, keyScan, *r.newUserCmd.fUsername, user.UserName, user.password, nil}
 
-	err := bashTemplate.Execute(os.Stdout, vals)
+	for _, repo := range repos {
+		vals.Repos = append(vals.Repos, repo.Name)
+	}
+
+	var script bytes.Buffer
+	err := bashTemplate.Execute(&script, vals)
 	check(err, "failed to execute bash template: %v", err)
+
+	switch mode {
+	case "raw":
+		if *r.newUserCmd.fTest {
+			err = testTemplate.Execute(&script, vals)
+		}
+		check(err, "failed to executed test template: %v", err)
+		fmt.Print(script.String())
+		return nil
+	case "out":
+	default:
+		raise("unknown mode %v", mode)
+	}
+
+	var out struct {
+		Script string
+		Vars   map[string]string
+	}
+	out.Script = script.String()
+	out.Vars = map[string]string{
+		"$USER": user.UserName,
+	}
+	if len(repos) == 1 {
+		out.Vars["$REPO"] = repos[0].Name
+	} else {
+		for i, repo := range repos {
+			out.Vars[fmt.Sprintf("$REPO%v", i+1)] = repo.Name
+		}
+	}
+	enc := json.NewEncoder(os.Stdout)
+	err = enc.Encode(out)
+	check(err, "failed to encode output: %v", err)
 
 	return nil
 }
@@ -249,6 +313,23 @@ func (r *runner) removeOldUsers() {
 	}
 }
 
+var start = time.Date(2019, time.December, 19, 12, 00, 0, 0, time.UTC)
+
+func (r *runner) genID() string {
+	now := time.Now()
+	diff := (now.UnixNano() - start.UnixNano()) / 1000000
+	bs := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutVarint(bs, diff)
+	var buf bytes.Buffer
+	enc := base32.NewEncoder(base32.HexEncoding, &buf)
+	if _, err := enc.Write(bs[:n]); err != nil {
+		panic(err)
+	}
+	id := buf.String()
+	id = strings.ToLower(id)
+	return id
+}
+
 func (r *runner) createUser() *userPassword {
 	var err error
 	randBytes := make([]byte, 30)
@@ -261,20 +342,9 @@ func (r *runner) createUser() *userPassword {
 	_, err = enc.Write(randBytes)
 	check(err, "failed to base64 encode password: %v", err)
 	// Try 3 times... because 3 is a magic number
-	start := time.Date(2019, time.December, 19, 12, 00, 0, 0, time.UTC)
 	for i := 0; i < 3; i++ {
-		now := time.Now()
-		diff := (now.UnixNano() - start.UnixNano()) / 1000000
-		bs := make([]byte, binary.MaxVarintLen64)
-		n := binary.PutVarint(bs, diff)
-		var buf bytes.Buffer
-		enc := base64.NewEncoder(base64.URLEncoding, &buf)
-		if _, err := enc.Write(bs[:n]); err != nil {
-			panic(err)
-		}
-		username := fmt.Sprintf("user%vu", buf.String())
-		username = strings.ReplaceAll(username, "-", "za")
-		username = strings.ReplaceAll(username, "_", "zb")
+		var user *gitea.User
+		username := "u" + r.genID()
 		no := false
 		args := gitea.CreateUserOption{
 			Username:           username,
@@ -282,7 +352,7 @@ func (r *runner) createUser() *userPassword {
 			Password:           password.String(),
 			MustChangePassword: &no,
 		}
-		user, err := r.client.AdminCreateUser(args)
+		user, err = r.client.AdminCreateUser(args)
 		if err == nil {
 			return &userPassword{
 				User:     user,
@@ -315,20 +385,34 @@ func (r *runner) setUserSSHKey(user *userPassword, pub string) {
 	check(err, "failed to set user SSH key: %v", err)
 }
 
-func (r *runner) createUserRepo(user *userPassword) *gitea.Repository {
-	args := gitea.CreateRepoOption{
-		Name:    user.UserName,
-		Private: true,
+func (r *runner) createUserRepos(user *userPassword, n int) (res []*gitea.Repository) {
+repos:
+	for i := 0; i < n; i++ {
+		var err error
+		var repo *gitea.Repository
+		for j := 0; j < 3; j++ {
+			name := "r" + r.genID()
+			args := gitea.CreateRepoOption{
+				Name:    name,
+				Private: true,
+			}
+			repo, err = r.client.AdminCreateRepo(UserGuidesRepo, args)
+			if err == nil {
+				res = append(res, repo)
+				continue repos
+			}
+		}
+		raise("failed to create user repostitory: %v", err)
 	}
-	repo, err := r.client.AdminCreateRepo(UserGuidesRepo, args)
-	check(err, "failed to create user repostitory %v/%v: %v", UserGuidesRepo, user.UserName, err)
-	return repo
+	return
 }
 
-func (r *runner) addUserCollabRepo(repo *gitea.Repository, user *userPassword) {
-	args := gitea.AddCollaboratorOption{}
-	err := r.client.AddCollaborator(UserGuidesRepo, repo.Name, user.UserName, args)
-	check(err, "failed to add user as collaborator: %v", err)
+func (r *runner) addUserCollabRepos(repos []*gitea.Repository, user *userPassword) {
+	for _, repo := range repos {
+		args := gitea.AddCollaboratorOption{}
+		err := r.client.AddCollaborator(UserGuidesRepo, repo.Name, user.UserName, args)
+		check(err, "failed to add user as collaborator: %v", err)
+	}
 }
 
 var gitHookTemplate = template.Must(template.New("t").Parse(`
@@ -338,32 +422,36 @@ trap "rm $tf" EXIT
 git push --mirror https://{{.User}}:{{.Password}}@github.com/userguides/{{.Repo}}.git > $tf 2>&1 || { cat $tf && false; }
 `[1:]))
 
-func (r *runner) addRepoMirrorHook(repo *gitea.Repository) {
-	var err error
-	var hook bytes.Buffer
-	vals := struct {
-		User     string
-		Password string
-		Repo     string
-	}{os.Getenv(EnvGithubUser), os.Getenv(EnvGithubPAT), repo.Name}
-	err = gitHookTemplate.Execute(&hook, vals)
-	check(err, "failed to execute git hook template: %v", err)
-	args := gitea.EditGitHookOption{
-		Content: hook.String(),
+func (r *runner) addReposMirrorHook(repos []*gitea.Repository) {
+	for _, repo := range repos {
+		var err error
+		var hook bytes.Buffer
+		vals := struct {
+			User     string
+			Password string
+			Repo     string
+		}{os.Getenv(EnvGithubUser), os.Getenv(EnvGithubPAT), repo.Name}
+		err = gitHookTemplate.Execute(&hook, vals)
+		check(err, "failed to execute git hook template: %v", err)
+		args := gitea.EditGitHookOption{
+			Content: hook.String(),
+		}
+		err = r.client.EditRepoGitHook(UserGuidesRepo, repo.Name, "post-receive", args)
+		check(err, "failed to edit repo git hook: %v", err)
 	}
-	err = r.client.EditRepoGitHook(UserGuidesRepo, repo.Name, "post-receive", args)
-	check(err, "failed to edit repo git hook: %v", err)
 }
 
-func (r *runner) createGitHubRepo(user *userPassword) {
-	no := false
-	_, resp, err := r.github.Repositories.Create(context.Background(), UserGuidesRepo, &github.Repository{
-		Name:        &user.UserName,
-		HasIssues:   &no,
-		HasWiki:     &no,
-		HasProjects: &no,
-	})
-	check(err, "failed to create GitHub repo: %v\n%v", err, resp.Status)
+func (r *runner) createGitHubRepo(repos []*gitea.Repository) {
+	for _, repo := range repos {
+		no := false
+		_, resp, err := r.github.Repositories.Create(context.Background(), UserGuidesRepo, &github.Repository{
+			Name:        &repo.Name,
+			HasIssues:   &no,
+			HasWiki:     &no,
+			HasProjects: &no,
+		})
+		check(err, "failed to create GitHub repo: %v\n%v", err, resp.Status)
+	}
 }
 
 func (r *runner) keyScan() string {
