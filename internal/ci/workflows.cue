@@ -46,7 +46,7 @@ test: json.#Workflow & {
 			run:  "./setup.sh"
 		}, {
 			name: "Create new user"
-			run:  "./newuser.sh"
+			run:  "./newuser.sh run -test"
 		}, {
 			name: "Tidy"
 			run:  "go mod tidy"

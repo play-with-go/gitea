@@ -28,7 +28,7 @@ func main1() int {
 	r.rootCmd = newRootCmd()
 	r.waitCmd = newWaitCmd()
 	r.preCmd = newPreCmd()
-	r.newUserCmd = newInitCmd()
+	r.newUserCmd = newNewUserCmd()
 
 	err := r.mainerr()
 	if err == nil {
@@ -157,12 +157,18 @@ func (g *preCmd) usageErr(format string, args ...interface{}) usageErr {
 type newUserCmd struct {
 	fs           *flag.FlagSet
 	flagDefaults string
+	fNumRepos    *int
+	fUsername    *string
+	fTest        *bool
 }
 
-func newInitCmd() *newUserCmd {
+func newNewUserCmd() *newUserCmd {
 	res := &newUserCmd{}
 	res.flagDefaults = newFlagSet("gitea init", func(fs *flag.FlagSet) {
 		res.fs = fs
+		res.fNumRepos = fs.Int("repos", 1, "how many repos to create")
+		res.fUsername = fs.String("username", "gopher", "the user for which to create the repositories")
+		res.fTest = fs.Bool("test", false, "generate additional test script (only valid in raw mode)")
 	})
 	return res
 }
