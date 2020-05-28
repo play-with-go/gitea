@@ -139,7 +139,10 @@ cat <<EOD > ~/.gitconfig
   name = {{.Username}}
   email = {{.Username}}@play-with-go.dev
 EOD
-git clone ssh://git@play-with-go.dev/userguides/{{.Username}}.git
+cat <<EOD > ~/.netrc
+machine play-with-go.dev login {{.Username}} password {{.Password}}
+EOD
+git clone https://play-with-go.dev/userguides/{{.Username}}.git
 cd {{.Username}}
 cat <<EOD > README
 This is a test
@@ -147,6 +150,11 @@ EOD
 git add -A
 git commit -am 'Initial commit'
 `[1:]))
+
+type userPassword struct {
+	*gitea.User
+	password string
+}
 
 func (r *runner) runNewUser(args []string) error {
 	if err := r.newUserCmd.fs.Parse(args); err != nil {
@@ -184,7 +192,8 @@ func (r *runner) runNewUser(args []string) error {
 		PubKey   string
 		KeyScan  string
 		Username string
-	}{priv, pub, keyScan, user.UserName}
+		Password string
+	}{priv, pub, keyScan, user.UserName, user.password}
 
 	err := bashTemplate.Execute(os.Stdout, vals)
 	check(err, "failed to execute bash template: %v", err)
@@ -240,9 +249,18 @@ func (r *runner) removeOldUsers() {
 	}
 }
 
-func (r *runner) createUser() *gitea.User {
-	// Try 3 times... because 3 is a magic number
+func (r *runner) createUser() *userPassword {
 	var err error
+	randBytes := make([]byte, 30)
+	n, err := rand.Read(randBytes)
+	if n != len(randBytes) || err != nil {
+		raise("failed to generate random bytes: got %v, err %v", len(randBytes), err)
+	}
+	var password bytes.Buffer
+	enc := base64.NewEncoder(base64.URLEncoding, &password)
+	_, err = enc.Write(randBytes)
+	check(err, "failed to base64 encode password: %v", err)
+	// Try 3 times... because 3 is a magic number
 	start := time.Date(2019, time.December, 19, 12, 00, 0, 0, time.UTC)
 	for i := 0; i < 3; i++ {
 		now := time.Now()
@@ -255,14 +273,21 @@ func (r *runner) createUser() *gitea.User {
 			panic(err)
 		}
 		username := fmt.Sprintf("user%vu", buf.String())
+		username = strings.ReplaceAll(username, "-", "za")
+		username = strings.ReplaceAll(username, "_", "zb")
+		no := false
 		args := gitea.CreateUserOption{
-			Username: username,
-			Email:    username + "@play-with-go.dev",
-			Password: username,
+			Username:           username,
+			Email:              username + "@play-with-go.dev",
+			Password:           password.String(),
+			MustChangePassword: &no,
 		}
 		user, err := r.client.AdminCreateUser(args)
 		if err == nil {
-			return user
+			return &userPassword{
+				User:     user,
+				password: password.String(),
+			}
 		}
 	}
 	raise("failed to create user: %v", err)
@@ -280,7 +305,7 @@ func (r *runner) createUserSSHKey() (string, string) {
 	return string(privKey), string(authKey)
 }
 
-func (r *runner) setUserSSHKey(user *gitea.User, pub string) {
+func (r *runner) setUserSSHKey(user *userPassword, pub string) {
 	args := gitea.CreateKeyOption{
 		Title:    "ssh key",
 		Key:      pub,
@@ -290,7 +315,7 @@ func (r *runner) setUserSSHKey(user *gitea.User, pub string) {
 	check(err, "failed to set user SSH key: %v", err)
 }
 
-func (r *runner) createUserRepo(user *gitea.User) *gitea.Repository {
+func (r *runner) createUserRepo(user *userPassword) *gitea.Repository {
 	args := gitea.CreateRepoOption{
 		Name:    user.UserName,
 		Private: true,
@@ -300,7 +325,7 @@ func (r *runner) createUserRepo(user *gitea.User) *gitea.Repository {
 	return repo
 }
 
-func (r *runner) addUserCollabRepo(repo *gitea.Repository, user *gitea.User) {
+func (r *runner) addUserCollabRepo(repo *gitea.Repository, user *userPassword) {
 	args := gitea.AddCollaboratorOption{}
 	err := r.client.AddCollaborator(UserGuidesRepo, repo.Name, user.UserName, args)
 	check(err, "failed to add user as collaborator: %v", err)
@@ -330,7 +355,7 @@ func (r *runner) addRepoMirrorHook(repo *gitea.Repository) {
 	check(err, "failed to edit repo git hook: %v", err)
 }
 
-func (r *runner) createGitHubRepo(user *gitea.User) {
+func (r *runner) createGitHubRepo(user *userPassword) {
 	no := false
 	_, resp, err := r.github.Repositories.Create(context.Background(), UserGuidesRepo, &github.Repository{
 		Name:        &user.UserName,
