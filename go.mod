@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	code.gitea.io/sdk/gitea v0.12.0
+	cuelang.org/go v0.2.0
 	github.com/google/go-github/v31 v31.0.0
 	github.com/kr/pretty v0.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37

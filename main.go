@@ -1,4 +1,4 @@
-// preguide is a pre-processor for Play With Docker-based guides
+// gitea is a helper to work with a gitea instance
 package main
 
 import (
