@@ -2,7 +2,9 @@
 
 set -eu
 
-cd "${BASH_SOURCE%/*}"
+command cd "$( command cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+export COMPOSE_PROJECT_NAME=gitea
 
 docker-compose stop
 for i in playwithgodev_gitea playwithgodev_nginx
@@ -21,7 +23,7 @@ docker-compose stop
 docker-compose run --rm -u git gitea gitea migrate
 
 # Create admin user
-docker-compose run --rm -u git gitea gitea admin create-user --username root --password asdffdsa --admin --email blah@blah.com
+docker-compose run --rm -u git gitea gitea admin create-user --username $PLAYWITHGODEV_ROOT_USER --password $PLAYWITHGODEV_ROOT_PASSWORD --admin --email blah@blah.com
 
 # Start for good
 docker-compose up -d

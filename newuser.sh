@@ -2,6 +2,8 @@
 
 set -eu
 
+command cd "$( command cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 if [ "$#" -eq 0 ]
 then
 	echo "need a command, either run or echo"
@@ -26,7 +28,7 @@ chmod 700 $tf
 
 if [ "$command" == "run" ]
 then
-	docker run --rm -e USER_UID=$(id -u) -e USER_GID=$(id -g) --network gitea_gitea -v $PWD:/scripts playwithgo/go1.14.3@sha256:6289a34af0112146e551790d9f2a36622e083600752a02d36f1ad1f9e1389382 /scripts/$(basename $tf)
+	docker run --rm -e USER_UID=$(id -u) -e USER_GID=$(id -g) --network gitea_gitea -v $PWD:/scripts playwithgo/go1.14.4@sha256:94e0f5cdc221034048679cfd00b29d2410a55696d933c309718530c2bb0f06ea /scripts/$(basename $tf)
 else
 	cat $tf
 fi

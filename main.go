@@ -207,7 +207,7 @@ func (r *runner) runNewUser(args []string) error {
 	r.addReposMirrorHook(repos)
 
 	// create GitHub repository
-	r.createGitHubRepo(repos)
+	r.createGitHubRepos(repos)
 
 	// Scan ssh host and trust
 	keyScan := r.keyScan()
@@ -441,11 +441,13 @@ func (r *runner) addReposMirrorHook(repos []*gitea.Repository) {
 	}
 }
 
-func (r *runner) createGitHubRepo(repos []*gitea.Repository) {
+func (r *runner) createGitHubRepos(repos []*gitea.Repository) {
 	for _, repo := range repos {
 		no := false
+		desc := fmt.Sprintf("User guide %v", repo.Name)
 		_, resp, err := r.github.Repositories.Create(context.Background(), UserGuidesRepo, &github.Repository{
 			Name:        &repo.Name,
+			Description: &desc,
 			HasIssues:   &no,
 			HasWiki:     &no,
 			HasProjects: &no,

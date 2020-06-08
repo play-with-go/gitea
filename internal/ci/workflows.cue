@@ -2,9 +2,6 @@ package ci
 
 import "github.com/SchemaStore/schemastore/src/schemas/json"
 
-workflowsDir: *"./" | string @tag(workflowsDir)
-scriptsDir:   *"./" | string @tag(scriptsDir)
-
 test: json.#Workflow & {
 	name: "Test"
 	env: {
@@ -16,22 +13,25 @@ test: json.#Workflow & {
 		PLAYWITHGODEV_KEY_FILE:      "${{ secrets.PLAYWITHGODEV_KEY_FILE }}"
 	}
 	on: {
-		pull_request: branches: [
-			"**",
-		]
-		push: branches: [
-			"master",
-		]
+		push: branches: ["master"]
+		pull_request: branches: ["**"]
 	}
 	jobs: test: {
-		"runs-on": "ubuntu-latest"
+		strategy: {
+			"fail-fast": false
+			matrix: {
+				os: ["ubuntu-latest"]
+				go_version: ["go1.14.4"]
+			}
+		}
+		"runs-on": "${{ matrix.os }}"
 		steps: [{
 			name: "Checkout code"
 			uses: "actions/checkout@v2"
 		}, {
 			name: "Install Go"
 			uses: "actions/setup-go@v2"
-			with: "go-version": "1.14.3"
+			with: "go-version": "${{ matrix.go-version }}"
 		}, {
 			name: "Verify"
 			run:  "go mod verify"
