@@ -213,5 +213,5 @@ gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71 h1:Xe2gvTZUJpsvOWUnvmL/tmhVBZUmHSvLbMjRj6NUUKo=
 gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
-mvdan.cc/dockexec v0.0.0-20200525133310-74f6643d8839 h1:56m+DhBU8l4fc30q+5Jv3eIlhcD5ecvPKAB1CgXgTkk=
-mvdan.cc/dockexec v0.0.0-20200525133310-74f6643d8839/go.mod h1:C1W8la9DALPMHdKQYDHeBMWniCfaFyy63I794VmgFiU=
+mvdan.cc/dockexec v0.0.0-20200617140021-ca98d4465984 h1:lMqEIdODy4qAPQrG6FYaInOHAtMWRsCuzO01pRE+zyg=
+mvdan.cc/dockexec v0.0.0-20200617140021-ca98d4465984/go.mod h1:C1W8la9DALPMHdKQYDHeBMWniCfaFyy63I794VmgFiU=
