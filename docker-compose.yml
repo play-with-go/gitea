@@ -1,4 +1,4 @@
-version: "3"
+version: "3.2"
 
 networks:
   gitea:
@@ -11,7 +11,6 @@ volumes:
 services:
   nginx:
     image: nginx:1.18.0
-    container_name: playwithgodev_nginx
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx.sh:/run.sh:ro
@@ -28,7 +27,6 @@ services:
 
   gitea:
     image: gitea/gitea:1.12.0-rc1
-    container_name: playwithgodev_gitea
     networks:
       gitea:
         aliases:
