@@ -29,6 +29,9 @@ test: json.#Workflow & {
 			name: "Checkout code"
 			uses: "actions/checkout@v2"
 		}, {
+			name: "Env setup"
+			run:  "./_scripts/env.sh github"
+		}, {
 			name: "Install Go"
 			uses: "actions/setup-go@v2"
 			with: "go-version": "${{ matrix.go-version }}"
@@ -42,11 +45,14 @@ test: json.#Workflow & {
 			name: "Test"
 			run:  "go test ./..."
 		}, {
+			name: "Start"
+			run:  "docker-compose up -d"
+		}, {
 			name: "Run setup"
-			run:  "./setup.sh"
+			run:  "./_scripts/setup.sh"
 		}, {
 			name: "Create new user"
-			run:  "./newuser.sh run -test"
+			run:  "./_scripts/newuser.sh run -test"
 		}, {
 			name: "Tidy"
 			run:  "go mod tidy"
