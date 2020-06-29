@@ -3,6 +3,8 @@ version: "3.2"
 networks:
   gitea:
     external: false
+  gitea_impl:
+    external: false
 
 volumes:
   gitea:
@@ -16,6 +18,8 @@ services:
       - ./nginx.sh:/run.sh:ro
     command: ["bash", "/run.sh"]
     networks:
+      gitea_impl:
+
       gitea:
         aliases:
           - play-with-go.dev
@@ -28,7 +32,7 @@ services:
   gitea:
     image: gitea/gitea:1.12.1
     networks:
-      gitea:
+      gitea_impl:
         aliases:
           - giteaserver
     environment:
