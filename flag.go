@@ -26,7 +26,7 @@ func main1() int {
 	r := newRunner()
 
 	r.rootCmd = newRootCmd()
-	r.waitCmd = newWaitCmd()
+	r.setupCmd = newSetupCmd()
 	r.preCmd = newPreCmd()
 	r.newUserCmd = newNewUserCmd()
 
@@ -104,41 +104,41 @@ func (r *rootCmd) usageErr(format string, args ...interface{}) usageErr {
 	return usageErr{fmt.Errorf(format, args...), r}
 }
 
-type waitCmd struct {
+type setupCmd struct {
 	fs           *flag.FlagSet
 	flagDefaults string
-	fWait        *string
 }
 
-func newWaitCmd() *waitCmd {
-	res := &waitCmd{}
-	res.flagDefaults = newFlagSet("gitea wait", func(fs *flag.FlagSet) {
+func newSetupCmd() *setupCmd {
+	res := &setupCmd{}
+	res.flagDefaults = newFlagSet("gitea setup", func(fs *flag.FlagSet) {
 		res.fs = fs
-		res.fWait = fs.String("wait", "10s", "max time to wait for API server")
 	})
 	return res
 }
 
-func (g *waitCmd) usage() string {
+func (i *setupCmd) usage() string {
 	return fmt.Sprintf(`
-usage: gitea wait
+usage: gitea setup
 
-%s`[1:], g.flagDefaults)
+%s`[1:], i.flagDefaults)
 }
 
-func (g *waitCmd) usageErr(format string, args ...interface{}) usageErr {
-	return usageErr{fmt.Errorf(format, args...), g}
+func (i *setupCmd) usageErr(format string, args ...interface{}) usageErr {
+	return usageErr{fmt.Errorf(format, args...), i}
 }
 
 type preCmd struct {
 	fs           *flag.FlagSet
 	flagDefaults string
+	fWait        *string
 }
 
 func newPreCmd() *preCmd {
 	res := &preCmd{}
 	res.flagDefaults = newFlagSet("gitea pre", func(fs *flag.FlagSet) {
 		res.fs = fs
+		res.fWait = fs.String("wait", "100s", "max time to wait for API server")
 	})
 	return res
 }
@@ -164,7 +164,7 @@ type newUserCmd struct {
 
 func newNewUserCmd() *newUserCmd {
 	res := &newUserCmd{}
-	res.flagDefaults = newFlagSet("gitea init", func(fs *flag.FlagSet) {
+	res.flagDefaults = newFlagSet("gitea newuser", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fNumRepos = fs.Int("repos", 1, "how many repos to create")
 		res.fUsername = fs.String("username", "gopher", "the user for which to create the repositories")
@@ -175,7 +175,7 @@ func newNewUserCmd() *newUserCmd {
 
 func (i *newUserCmd) usage() string {
 	return fmt.Sprintf(`
-usage: gitea init
+usage: gitea newuser
 
 %s`[1:], i.flagDefaults)
 }

@@ -45,15 +45,6 @@ test: json.#Workflow & {
 			name: "Test"
 			run:  "go test ./..."
 		}, {
-			name: "Start"
-			run:  "docker-compose up -d"
-		}, {
-			name: "Run setup"
-			run:  "./_scripts/setup.sh"
-		}, {
-			name: "Create new user"
-			run:  "./_scripts/newuser.sh run -test"
-		}, {
 			name: "Tidy"
 			run:  "go mod tidy"
 		}, {
