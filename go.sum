@@ -1,6 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-code.gitea.io/sdk/gitea v0.12.0 h1:hvDCz4wtFvo7rf5Ebj8tGd4aJ4wLPKX3BKFX9Dk1Pgs=
-code.gitea.io/sdk/gitea v0.12.0/go.mod h1:z3uwDV/b9Ls47NGukYM9XhnHtqPh/J+t40lsUrR6JDY=
+code.gitea.io/sdk/gitea v0.12.1 h1:bMgjEqPnNX/i6TpVwXwpjJtFOnUSuC9P6yy/jjy8sjY=
+code.gitea.io/sdk/gitea v0.12.1/go.mod h1:z3uwDV/b9Ls47NGukYM9XhnHtqPh/J+t40lsUrR6JDY=
 cuelang.org/go v0.2.0 h1:5Cl8QY142TQWZfkQ3X4ODxrA8P1u3eqmaPHNP1d0p0Q=
 cuelang.org/go v0.2.0/go.mod h1:tbI5u8GqZ8NRhOwjWST6vqeWbbpvCqpVS64bZz32Dso=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
