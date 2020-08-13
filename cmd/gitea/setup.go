@@ -25,7 +25,7 @@ func (r *runner) runSetup(args []string) error {
 	check(err, "failed to run [%v]: %v\n%s", adminUser, err, out)
 
 	var stdout, stderr bytes.Buffer
-	rootDirCmd := exec.Command("go", "list", "-f", "{{.Dir}}", "github.com/play-with-go/gitea")
+	rootDirCmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea")
 	rootDirCmd.Stdout = &stdout
 	rootDirCmd.Stderr = &stderr
 	err = rootDirCmd.Run()
