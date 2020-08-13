@@ -88,11 +88,11 @@ func (r *runner) runSetup(args []string) error {
 	if err := r.preCmd.fs.Parse(args); err != nil {
 		return r.preCmd.usageErr("failed to parse flags: %v", err)
 	}
-	migrate := exec.Command("docker-compose", "run", "--rm", "-u", "git", "gitea", "gitea", "migrate")
+	migrate := exec.Command("docker-compose", "exec", "-T", "-u", "git", "gitea", "gitea", "migrate")
 	out, err := migrate.CombinedOutput()
 	check(err, "failed to run [%v]: %v\n%s", migrate, err, out)
 
-	adminUser := exec.Command("docker-compose", "run", "--rm", "-u", "git", "gitea", "gitea", "admin", "create-user",
+	adminUser := exec.Command("docker-compose", "exec", "-T", "-u", "git", "gitea", "gitea", "admin", "create-user",
 		"--admin", "--username", os.Getenv("PLAYWITHGODEV_ROOT_USER"),
 		"--password", os.Getenv("PLAYWITHGODEV_ROOT_PASSWORD"), "--email", "blah@blah.com",
 	)
