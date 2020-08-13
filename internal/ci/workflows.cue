@@ -26,6 +26,9 @@ test: json.#Workflow & {
 		}
 		"runs-on": "${{ matrix.os }}"
 		steps: [{
+			name: "Setup netrc"
+			run:  #"echo -e "machine github.com\nlogin $PLAYWITHGODEV_GITHUB_USER\npassword $PLAYWITHGODEV_GITHUB_PAT\n\nmachine api.github.com\nlogin $PLAYWITHGODEV_GITHUB_USER\npassword $PLAYWITHGODEV_GITHUB_PAT\n" > ~/.netrc"#
+		}, {
 			name: "Checkout code"
 			uses: "actions/checkout@v2"
 		}, {

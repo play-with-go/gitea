@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-const (
-	pullImageMissing = "missing"
-)
-
 type usageErr struct {
 	err error
 	u   cmd
@@ -28,6 +24,7 @@ func main1() int {
 	r.rootCmd = newRootCmd()
 	r.setupCmd = newSetupCmd()
 	r.preCmd = newPreCmd()
+	r.serveCmd = newServeCmd()
 	r.newUserCmd = newNewUserCmd()
 
 	err := r.mainerr()
@@ -154,21 +151,43 @@ func (g *preCmd) usageErr(format string, args ...interface{}) usageErr {
 	return usageErr{fmt.Errorf(format, args...), g}
 }
 
+type serveCmd struct {
+	fs           *flag.FlagSet
+	flagDefaults string
+	fPort        *string
+}
+
+func newServeCmd() *serveCmd {
+	res := &serveCmd{}
+	res.flagDefaults = newFlagSet("gitea serve", func(fs *flag.FlagSet) {
+		res.fs = fs
+		res.fPort = fs.String("port", "8080", "port on which to listen")
+	})
+	return res
+}
+
+func (g *serveCmd) usage() string {
+	return fmt.Sprintf(`
+usage: gitea serve
+
+%s`[1:], g.flagDefaults)
+}
+
+func (g *serveCmd) usageErr(format string, args ...interface{}) usageErr {
+	return usageErr{fmt.Errorf(format, args...), g}
+}
+
 type newUserCmd struct {
 	fs           *flag.FlagSet
 	flagDefaults string
-	fNumRepos    *int
-	fUsername    *string
-	fTest        *bool
+	fDocker      *bool
 }
 
 func newNewUserCmd() *newUserCmd {
 	res := &newUserCmd{}
 	res.flagDefaults = newFlagSet("gitea newuser", func(fs *flag.FlagSet) {
 		res.fs = fs
-		res.fNumRepos = fs.Int("repos", 1, "how many repos to create")
-		res.fUsername = fs.String("username", "gopher", "the user for which to create the repositories")
-		res.fTest = fs.Bool("test", false, "generate additional test script (only valid in raw mode)")
+		res.fDocker = fs.Bool("docker", false, "process is running within docker container")
 	})
 	return res
 }

@@ -22,8 +22,10 @@ type runner struct {
 	*rootCmd
 	setupCmd   *setupCmd
 	preCmd     *preCmd
+	serveCmd   *serveCmd
 	newUserCmd *newUserCmd
-	client     *gitea.Client
+
+	client *gitea.Client
 
 	github *github.Client
 }
@@ -58,6 +60,8 @@ func (r *runner) mainerr() (err error) {
 		return r.runSetup(args[1:])
 	case "pre":
 		return r.runPre(args[1:])
+	case "serve":
+		return r.runServe(args[1:])
 	case "newuser":
 		return r.runNewUser(args[1:])
 	default:
