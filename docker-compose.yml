@@ -39,3 +39,20 @@ services:
       - gitea:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+
+  gitea_prestep:
+    image: golang:1.15
+    networks:
+      - gitea
+    command: ["go", "run", "./cmd/gitea", "serve"]
+    environment:
+      - PLAYWITHGODEV_ROOT_USER
+      - PLAYWITHGODEV_ROOT_PASSWORD
+      - PLAYWITHGODEV_GITHUB_USER
+      - PLAYWITHGODEV_GITHUB_PAT
+      - GOPROXY=file:///proxy
+    volumes:
+      - .:/start
+      - $GOMODCACHE/cache/download:/proxy:ro
+    working_dir: /start
+
