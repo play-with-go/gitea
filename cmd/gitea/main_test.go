@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/kr/pretty"
 	"github.com/play-with-go/preguide"
 )
 
@@ -85,6 +87,7 @@ func TestNewUser(t *testing.T) {
 	if err := json.Unmarshal(outJSON, &env); err != nil {
 		t.Fatalf("failed to decode preguide.PrestepOut from %q: %v", outJSON, err)
 	}
+	fmt.Printf("Env vars: %v\n", pretty.Sprint(env))
 }
 
 func (tr *testRunner) mustRunDockerCompose(args ...string) ([]byte, []byte) {
