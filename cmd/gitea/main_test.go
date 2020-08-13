@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,10 +15,25 @@ const (
 
 type testRunner struct {
 	*testing.T
+	root string
+}
+
+func newTestRunner(t *testing.T) *testRunner {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("failed to get root of module: %v\n%s", err, stderr.Bytes())
+	}
+	return &testRunner{
+		T:    t,
+		root: strings.TrimSpace(stdout.String()),
+	}
 }
 
 func TestNewUser(t *testing.T) {
-	tr := testRunner{t}
+	tr := newTestRunner(t)
 	// In case the docker-compose instance is already running... blow it away
 	// so that the test starts from fresh
 	tr.mustRunDockerCompose("down", "-t", "0", "-v")
@@ -30,25 +46,24 @@ func TestNewUser(t *testing.T) {
 		tr.mustRunDockerCompose("down", "-t", "0", "-v")
 	})
 
-	tr.mustRun("go", "run", "github.com/play-with-go/gitea", "setup")
+	tr.mustRun("go", "run", "github.com/play-with-go/gitea/cmd/gitea", "setup")
 	tr.mustRun("./_scripts/newuser.sh", "run", "-test")
 }
 
 func (tr *testRunner) mustRun(cmd string, args ...string) string {
-	return tr.mustRunCmd(exec.Command(cmd, args...))
+	c := exec.Command(cmd, args...)
+	c.Dir = tr.root
+	return tr.mustRunCmd(c)
 }
 
 func (tr *testRunner) mustRunDockerCompose(args ...string) string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		tr.Fatalf("failed to get working directory: %v", err)
-	}
 	composeFiles := []string{
 		os.Getenv(envComposeFile),
-		filepath.Join(cwd, "docker-compose.yml"),
-		filepath.Join(cwd, "docker-compose-playwithgo.yml"),
+		filepath.Join(tr.root, "docker-compose.yml"),
+		filepath.Join(tr.root, "docker-compose-playwithgo.yml"),
 	}
 	c := exec.Command("docker-compose", args...)
+	c.Dir = tr.root
 	c.Env = append(os.Environ(),
 		"COMPOSE_FILE="+strings.Join(composeFiles, string(os.PathListSeparator)),
 	)

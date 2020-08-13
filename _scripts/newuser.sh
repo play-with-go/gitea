@@ -26,7 +26,7 @@ fi
 tf=$(mktemp tmpXXXXXX.sh)
 trap "rm -f $tf" EXIT
 
-go run -exec "$dockexec -T" github.com/play-with-go/gitea newuser "$@" raw > $tf
+go run -exec "$dockexec -T" github.com/play-with-go/gitea/cmd/gitea newuser "$@" raw > $tf
 
 if [ "$command" == "run" ]
 then
