@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/base32"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -171,7 +171,7 @@ func (r *runner) genID() string {
 	bs := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutVarint(bs, diff)
 	var buf bytes.Buffer
-	enc := base32.NewEncoder(base32.HexEncoding, &buf)
+	enc := hex.NewEncoder(&buf)
 	if _, err := enc.Write(bs[:n]); err != nil {
 		panic(err)
 	}
