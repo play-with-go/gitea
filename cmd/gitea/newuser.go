@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"os"
@@ -25,15 +26,35 @@ func (r *runner) runNewUser(args []string) error {
 		return nil
 	}
 
+	checkStatus := func(resp *http.Response, format string, args ...interface{}) {
+		if resp.StatusCode/100 != 2 {
+			defer resp.Body.Close()
+			var body bytes.Buffer
+			_, err := io.Copy(&body, resp.Body)
+			check(err, "failed to read error response body: %v", err)
+			args = append(args, body.String())
+			raise(format, args...)
+		}
+	}
+
 	u := "http://gitea_prestep:8080/newuser"
+	versionResp, err := http.Get(u + "?get-version=1")
+	check(err, "failed to get version information: %v", err)
+	checkStatus(versionResp, "get version request not successful: %v")
+
+	defer versionResp.Body.Close()
+	_, err = io.Copy(os.Stdout, versionResp.Body)
+	check(err, "failed to read version response: %v", err)
+
 	// We are running in the relevant docker envionment. Make an HTTP request
 	// using stdin as the body
-	resp, err := http.Post(u, "application/json", os.Stdin)
+	newuser, err := http.Post(u, "application/json", os.Stdin)
 	check(err, "failed to post to %v: %v", u, err)
+	checkStatus(newuser, "newuser request not successful: %v")
 
-	defer resp.Body.Close()
-	_, err = io.Copy(os.Stdout, resp.Body)
-	check(err, "failed to read response from %v: %v", u, err)
+	defer newuser.Body.Close()
+	_, err = io.Copy(os.Stdout, newuser.Body)
+	check(err, "failed to read newuser main response: %v", err)
 
 	return nil
 }

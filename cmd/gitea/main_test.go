@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kr/pretty"
 	"github.com/play-with-go/preguide"
@@ -20,20 +21,19 @@ const (
 
 type testRunner struct {
 	*testing.T
-	root           string
-	envComposeFile string
-	envGoModCache  string
+	root                  string
+	envComposeFile        string
+	envGoModCache         string
+	envComposeProjectName string
 }
 
 func newTestRunner(t *testing.T) *testRunner {
-	var listOut, listErr bytes.Buffer
-	list := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea")
-	list.Stdout = &listOut
-	list.Stderr = &listErr
-	if err := list.Run(); err != nil {
-		t.Fatalf("failed to get root of module: %v\n%s", err, listErr.Bytes())
+	tr := &testRunner{
+		T:                     t,
+		envComposeProjectName: fmt.Sprintf("test%v", time.Now().UnixNano()),
 	}
-	root := strings.TrimSpace(listOut.String())
+	listOut, _ := tr.mustRunCmd(exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea"))
+	root := strings.TrimSpace(string(listOut))
 	composeFiles := []string{
 		os.Getenv(envComposeFile),
 		filepath.Join(root, "docker-compose.yml"),
@@ -42,32 +42,25 @@ func newTestRunner(t *testing.T) *testRunner {
 	var goenv struct {
 		GOPATH string
 	}
-	var envOut, envErr bytes.Buffer
-	env := exec.Command("go", "env", "-json")
-	env.Stdout = &envOut
-	env.Stderr = &envErr
-	if err := env.Run(); err != nil {
-		t.Fatalf("failed to get go env: %v\n%s", err, envErr.Bytes())
-	}
-	if err := json.Unmarshal(envOut.Bytes(), &goenv); err != nil {
-		t.Fatalf("failed to unmarshal go env output (%q): %v", envOut.Bytes(), err)
+	envOut, _ := tr.mustRunCmd(exec.Command("go", "env", "-json"))
+	if err := json.Unmarshal(envOut, &goenv); err != nil {
+		t.Fatalf("failed to unmarshal go env output (%q): %v", envOut, err)
 	}
 	gopath0 := strings.Split(goenv.GOPATH, string(os.PathListSeparator))[0]
 
-	return &testRunner{
-		T:              t,
-		root:           root,
-		envComposeFile: strings.Join(composeFiles, string(os.PathListSeparator)),
-		envGoModCache:  filepath.Join(gopath0, "pkg", "mod"),
-	}
+	tr.root = root
+	tr.envComposeFile = strings.Join(composeFiles, string(os.PathListSeparator))
+	tr.envGoModCache = filepath.Join(gopath0, "pkg", "mod")
+	return tr
 }
 
-func TestNewUser(t *testing.T) {
-	tr := newTestRunner(t)
-	// In case the docker-compose instance is already running... blow it away
-	// so that the test starts from fresh
-	tr.mustRunDockerCompose("down", "-t", "0", "-v")
+var mainRef bool
 
+func TestNewUser(t *testing.T) {
+	if mainRef {
+		main()
+	}
+	tr := newTestRunner(t)
 	// Start the docker-compose instance in the background
 	tr.mustRunDockerCompose("up", "-t", "0", "-d")
 
@@ -79,15 +72,36 @@ func TestNewUser(t *testing.T) {
 	tr.mustRunCmd(exec.Command("go", "run", "github.com/play-with-go/gitea/cmd/gitea", "setup"))
 	newUser := exec.Command("go", "run", "github.com/play-with-go/gitea/cmd/gitea", "newuser")
 	newUser.Stdin = strings.NewReader(`{"Repos": [{"Var": "REPO1", "Pattern": "user*"}]}`)
-	outJSON, _ := tr.mustRunCmd(newUser)
+	newUserOut, _ := tr.mustRunCmd(newUser)
 
-	var env preguide.PrestepOut
-
-	// Verify we got some valid JSON back
-	if err := json.Unmarshal(outJSON, &env); err != nil {
-		t.Fatalf("failed to decode preguide.PrestepOut from %q: %v", outJSON, err)
+	dec := json.NewDecoder(bytes.NewBuffer(newUserOut))
+	var versionDetails struct {
+		Path string
 	}
-	fmt.Printf("Env vars: %v\n", pretty.Sprint(env))
+	if err := dec.Decode(&versionDetails); err != nil {
+		t.Fatalf("failed to decode version details: %v. Input was: %s", err, newUserOut)
+	}
+	wantPath := "github.com/play-with-go/gitea/cmd/gitea"
+	if gotPath := versionDetails.Path; wantPath != gotPath {
+		t.Fatalf("wanted version path %v; got %v", wantPath, gotPath)
+	}
+	var env preguide.PrestepOut
+	if err := dec.Decode(&env); err != nil {
+		t.Fatalf("failed to decode env information: %v. Input was: %s", err, newUserOut)
+	}
+	found := map[string]bool{
+		"GITEA_USERNAME": false,
+		"GITEA_PASSWORD": false,
+		"REPO1":          false,
+	}
+	for _, v := range env.Vars {
+		found[v[:strings.Index(v, "=")]] = true
+	}
+	for k, v := range found {
+		if !v {
+			t.Errorf("failed to find env var %v in %v", k, pretty.Sprint(env))
+		}
+	}
 }
 
 func (tr *testRunner) mustRunDockerCompose(args ...string) ([]byte, []byte) {
@@ -104,6 +118,12 @@ func (tr *testRunner) mustRunCmd(cmd *exec.Cmd) ([]byte, []byte) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	if cmd.Env == nil {
+		cmd.Env = os.Environ()
+	}
+	cmd.Env = append(cmd.Env,
+		"COMPOSE_PROJECT_NAME="+tr.envComposeProjectName,
+	)
 	err := cmd.Run()
 	if err != nil {
 		tr.Fatalf("failed to run [%v]: %v\n%s", cmd, err, stderr.Bytes())

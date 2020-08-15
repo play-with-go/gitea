@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"text/template"
 	"time"
@@ -27,12 +28,34 @@ func (r *runner) runServe(args []string) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals)
 
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		raise("failed to get debug build info")
+	}
+	buildInfoJSON, err := json.MarshalIndent(buildInfo, "", "  ")
+	check(err, "failed to JSON marshal build info: %v", err)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/newuser", func(resp http.ResponseWriter, req *http.Request) {
+		fmt.Printf("URL: %v, method: %v\n", req.URL, req.Method)
+		if req.URL.Query().Get("get-version") == "1" {
+			if req.Method != "GET" {
+				resp.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(resp, "GET request required for get-version")
+				return
+			}
+			fmt.Fprintf(resp, "%s", buildInfoJSON)
+			return
+		}
+		if req.Method != "POST" {
+			resp.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(resp, "POST request required for /newuser; URL: %v, method: %v", req.URL, req.Method)
+			return
+		}
 		args := new(gitea.NewUser)
 		dec := json.NewDecoder(req.Body)
 		if err := dec.Decode(&args); err != nil {
-			resp.WriteHeader(400)
+			resp.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(resp, "failed to decode request: %v", err)
 			return
 		}
@@ -42,7 +65,7 @@ func (r *runner) runServe(args []string) error {
 		enc := json.NewEncoder(resp)
 		if err := enc.Encode(res); err != nil {
 			// TODO: this header write is probably too late?
-			resp.WriteHeader(400)
+			resp.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(resp, "failed to encode response: %v", err)
 			return
 		}
