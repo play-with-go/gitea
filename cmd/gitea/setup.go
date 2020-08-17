@@ -27,17 +27,12 @@ func (r *runner) runSetup(args []string) error {
 	check(err, "failed to run [%v]: %v", adminUser, err)
 
 	// Now run self in Docker
-	org := r.buildSelfDockerCmd(
+	org := r.buildSelfDockerCmd([]string{
 		"-e", "PLAYWITHGODEV_ROOT_USER",
 		"-e", "PLAYWITHGODEV_ROOT_PASSWORD",
 		"-e", "PLAYWITHGODEV_GITHUB_USER",
 		"-e", "PLAYWITHGODEV_GITHUB_PAT",
-	)
-	// Add the args to self
-	org.Args = append(org.Args, "pre")
-	org.Stdout = os.Stdout
-	org.Stderr = os.Stderr
-	org.Stdin = os.Stdin
+	}, "pre")
 	err = org.Run()
 	check(err, "failed to run [%v]: %v", org, err)
 

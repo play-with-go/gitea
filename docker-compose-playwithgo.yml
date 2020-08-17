@@ -2,7 +2,10 @@ version: "3.2"
 
 services:
   playwithgo:
-    image: playwithgo/go1.14.4@sha256:94e0f5cdc221034048679cfd00b29d2410a55696d933c309718530c2bb0f06ea
-
+    environment:
+      - PLAYWITHGO_NOGOPHER=true
+    image: playwithgo/go1.15@sha256:7f5fc95e2bd00c13fbf04560d267028db94b7b0b05b4019683517ee1140da384
     networks:
       - gitea
+    volumes:
+      - $MKCERT_CAROOT_CERT:/usr/local/share/ca-certificates/${COMPOSE_PROJECT_NAME}_gitea_mkcert.crt:ro

@@ -16,11 +16,7 @@ func (r *runner) runNewUser(args []string) error {
 	// ourselves in docker passing that flag. That is to say, the -docker
 	// flag indicates we are running docker.
 	if !*r.newUserCmd.fDocker {
-		self := r.buildSelfDockerCmd()
-		self.Args = append(self.Args, "newuser", "-docker")
-		self.Stdin = os.Stdin
-		self.Stdout = os.Stdout
-		self.Stderr = os.Stderr
+		self := r.buildSelfDockerCmd(nil, "newuser", "-docker")
 		err := self.Run()
 		check(err, "failed to run [%v]: %v", self, err)
 		return nil
