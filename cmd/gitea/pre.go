@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
@@ -26,6 +28,7 @@ func (r *runner) runPre(args []string) error {
 		if err == nil {
 			break
 		}
+		fmt.Fprintln(os.Stderr, "Server not available yet....")
 	}
 	if err != nil {
 		return err
