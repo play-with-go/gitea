@@ -21,7 +21,7 @@ test: json.#Workflow & {
 			"fail-fast": false
 			matrix: {
 				os: ["ubuntu-latest"]
-				go_version: ["go1.14.4"]
+				go_version: ["1.14.4"]
 			}
 		}
 		"runs-on": "${{ matrix.os }}"
@@ -32,12 +32,15 @@ test: json.#Workflow & {
 			name: "Checkout code"
 			uses: "actions/checkout@v2"
 		}, {
-			name: "Env setup"
-			run:  "./_scripts/env.sh github"
-		}, {
 			name: "Install Go"
 			uses: "actions/setup-go@v2"
-			with: "go-version": "${{ matrix.go-version }}"
+			with: "go-version": "${{ matrix.go_version }}"
+		}, {
+			name: "Setup mkcert"
+			run:  "./_scripts/setupmkcert.sh"
+		}, {
+			name: "Env setup"
+			run:  "./_scripts/env.sh github"
 		}, {
 			name: "Verify"
 			run:  "go mod verify"
@@ -50,6 +53,10 @@ test: json.#Workflow & {
 		}, {
 			name: "Tidy"
 			run:  "go mod tidy"
+		}, {
+			name:                "Tidy mkcert"
+			run:                 "go mod tidy"
+			"working-directory": "_scripts/mkcert"
 		}, {
 			name: "Verify commit is clean"
 			run:  #"test -z "$(git status --porcelain)" || (git status; git diff; false)"#

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (r *runner) buildSelfDockerCmd(dockerArgs ...string) *exec.Cmd {
+func (r *runner) buildSelfDockerCmd(dockerArgs []string, args ...string) *exec.Cmd {
 	var stdout, stderr bytes.Buffer
 	rootDirCmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea")
 	rootDirCmd.Stdout = &stdout
@@ -24,12 +24,16 @@ func (r *runner) buildSelfDockerCmd(dockerArgs ...string) *exec.Cmd {
 		"-f", filepath.Join(rootDir, "docker-compose.yml"),
 		"-f", filepath.Join(rootDir, "docker-compose-playwithgo.yml"),
 		"run", "--rm",
-		"-v", fmt.Sprintf("%v:/init", self), "--entrypoint=/init",
+		"-v", fmt.Sprintf("%v:/init", self),
 		"-v", fmt.Sprintf("%v:/workdir", rootDir), "--workdir=/workdir",
 	)
-	res.Env = append(os.Environ(), "GOMODCACHE=")
 	res.Args = append(res.Args, dockerArgs...)
-	res.Args = append(res.Args, "playwithgo")
+	res.Args = append(res.Args, "playwithgo", "/init")
+	res.Args = append(res.Args, args...)
+	res.Stdout = os.Stdout
+	res.Stderr = os.Stderr
+	res.Stdin = os.Stdin
+	res.Env = append(os.Environ(), "GOMODCACHE=")
 	// now the caller can add the arguments to the command
 	return res
 }
