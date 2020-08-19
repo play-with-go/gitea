@@ -21,7 +21,7 @@ test: json.#Workflow & {
 			"fail-fast": false
 			matrix: {
 				os: ["ubuntu-latest"]
-				go_version: ["1.14.4"]
+				go_version: ["1.15"]
 			}
 		}
 		"runs-on": "${{ matrix.os }}"

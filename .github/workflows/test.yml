@@ -48,5 +48,5 @@ jobs:
         os:
         - ubuntu-latest
         go_version:
-        - 1.14.4
+        - "1.15"
       fail-fast: false
