@@ -11,7 +11,7 @@ modRoot="$(go list -m -f {{.Dir}})"
 
 GOBIN=$modRoot/.bin go install github.com/myitcv/docker-compose
 
-rootCA="$(mkcert -CAROOT)/rootCA.pem"
+rootCA="$(cat $(mkcert -CAROOT)/rootCA.pem)"
 $export COMPOSE_PROJECT_NAME gitea
 $export PATH "$modRoot/.bin:$PATH"
-$export MKCERT_CAROOT_CERT "$rootCA"
+$export PLAYWITHGO_ROOTCA "$rootCA"
