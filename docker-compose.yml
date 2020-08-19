@@ -41,7 +41,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   gitea_prestep:
-    image: playwithgo/go1.15@sha256:7f5fc95e2bd00c13fbf04560d267028db94b7b0b05b4019683517ee1140da384
+    image: playwithgo/go1.15@sha256:7bf7788bb2291af0830a8c62cf38e3bfbd8b0d53e5435531458c8f77bd3efaeb
     networks:
       - gitea
     command: ["go", "run", "./cmd/gitea", "serve"]
@@ -52,9 +52,9 @@ services:
       - PLAYWITHGODEV_GITHUB_PAT
       - GOPROXY=file:///proxy
       - PLAYWITHGO_NOGOPHER=true
+      - PLAYWITHGO_ROOTCA
     volumes:
       - .:/start
       - $GOMODCACHE/cache/download:/proxy:ro
-      - $MKCERT_CAROOT_CERT:/usr/local/share/ca-certificates/${COMPOSE_PROJECT_NAME}_gitea_mkcert.crt:ro
     working_dir: /start
 

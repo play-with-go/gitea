@@ -1,5 +1,5 @@
 bashExport() {
-	echo export "$1=$2"
+	echo export "$1=\"$2\""
 }
 
 bashAlias() {
@@ -7,7 +7,7 @@ bashAlias() {
 }
 
 smartcdExport() {
-	echo autostash "$1=$2"
+	echo autostash "$1=\"$2\""
 }
 
 smartcdAlias() {
@@ -15,7 +15,7 @@ smartcdAlias() {
 }
 
 githubExport() {
-	echo "::set-env name=$1::$2"
+	echo "::set-env name=$1::$(echo "$2" | sed ':a;N;$!ba;s/%/%25/g' |  sed ':a;N;$!ba;s/\r/%0D/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
 }
 
 githubAlias() {
