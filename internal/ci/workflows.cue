@@ -54,10 +54,6 @@ test: json.#Workflow & {
 			name: "Tidy"
 			run:  "go mod tidy"
 		}, {
-			name:                "Tidy mkcert"
-			run:                 "go mod tidy"
-			"working-directory": "_scripts/mkcert"
-		}, {
 			name: "Verify commit is clean"
 			run:  #"test -z "$(git status --porcelain)" || (git status; git diff; false)"#
 		}]

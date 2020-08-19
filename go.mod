@@ -5,6 +5,7 @@ go 1.15
 require (
 	code.gitea.io/sdk/gitea v0.12.1
 	cuelang.org/go v0.2.2
+	github.com/FiloSottile/mkcert v1.4.1
 	github.com/google/go-github/v31 v31.0.0
 	github.com/kr/pretty v0.2.0
 	github.com/myitcv/docker-compose v0.0.0-20200623052903-c60483a3250f
