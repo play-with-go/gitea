@@ -126,7 +126,7 @@ func (tr *testRunner) mustRunCmd(cmd *exec.Cmd) ([]byte, []byte) {
 	)
 	err := cmd.Run()
 	if err != nil {
-		tr.Fatalf("failed to run [%v]: %v\n%s", cmd, err, stderr.Bytes())
+		tr.Fatalf("failed to run [%v]: %v\nstdout: %s\nstderr: %s", cmd, err, stdout.Bytes(), stderr.Bytes())
 	}
 	return stdout.Bytes(), stderr.Bytes()
 }
