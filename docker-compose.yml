@@ -19,8 +19,6 @@ services:
       gitea:
         aliases:
           - play-with-go.dev
-    ports:
-      - "4443:443"
     environment:
       - PLAYWITHGODEV_CERT_FILE
       - PLAYWITHGODEV_KEY_FILE

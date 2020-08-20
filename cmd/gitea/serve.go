@@ -36,20 +36,17 @@ func (r *runner) runServe(args []string) error {
 	check(err, "failed to JSON marshal build info: %v", err)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/newuser", func(resp http.ResponseWriter, req *http.Request) {
-		fmt.Printf("URL: %v, method: %v\n", req.URL, req.Method)
-		if req.URL.Query().Get("get-version") == "1" {
-			if req.Method != "GET" {
-				resp.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(resp, "GET request required for get-version")
-				return
-			}
-			fmt.Fprintf(resp, "%s", buildInfoJSON)
+	mux.HandleFunc("/", func(resp http.ResponseWriter, req *http.Request) {
+		if req.URL.Query().Get("get-version") != "1" || req.Method != "GET" {
+			resp.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		fmt.Fprintf(resp, "%s", buildInfoJSON)
+		return
+	})
+	mux.HandleFunc("/newuser", func(resp http.ResponseWriter, req *http.Request) {
 		if req.Method != "POST" {
 			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "POST request required for /newuser; URL: %v, method: %v", req.URL, req.Method)
 			return
 		}
 		args := new(gitea.NewUser)
@@ -173,6 +170,9 @@ func (r *runner) removeOldUsers() {
 		users, err := r.client.AdminListUsers(opt)
 		check(err, "failed to list users: %v", err)
 		for _, user := range users {
+			if user.IsAdmin {
+				continue
+			}
 			if delta := now.Sub(user.Created); delta > 3*time.Hour {
 				err := r.client.AdminDeleteUser(user.UserName)
 				check(err, "failed to delete user %v: %v", user.UserName, err)
