@@ -33,10 +33,10 @@ func (r *runner) runNewUser(args []string) error {
 		}
 	}
 
-	u := "http://gitea_prestep:8080/newuser"
-	versionResp, err := http.Get(u + "?get-version=1")
-	check(err, "failed to get version information: %v", err)
-	checkStatus(versionResp, "get version request not successful: %v")
+	rootURL := "http://gitea_prestep:8080"
+	versionResp, err := http.Get(rootURL + "?get-version=1")
+	check(err, "failed to get version information from %v: %v", rootURL, err)
+	checkStatus(versionResp, "get version request from %v not successful: %v", rootURL)
 
 	defer versionResp.Body.Close()
 	_, err = io.Copy(os.Stdout, versionResp.Body)
@@ -44,8 +44,9 @@ func (r *runner) runNewUser(args []string) error {
 
 	// We are running in the relevant docker envionment. Make an HTTP request
 	// using stdin as the body
-	newuser, err := http.Post(u, "application/json", os.Stdin)
-	check(err, "failed to post to %v: %v", u, err)
+	newuserURL := rootURL + "/newuser"
+	newuser, err := http.Post(newuserURL, "application/json", os.Stdin)
+	check(err, "failed to post to %v: %v", newuserURL, err)
 	checkStatus(newuser, "newuser request not successful: %v")
 
 	defer newuser.Body.Close()
