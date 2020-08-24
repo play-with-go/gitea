@@ -53,6 +53,16 @@ import "list"
 		Image: string
 	}
 
+	// Networks is the list of docker networks to connect to when running
+	// this guide. Defaults to the list of networks specified for presteps
+	// (once we have a solution for cuelang.org/issues/473)
+	Networks: [...string]
+
+	// Env is the environment to pass to docker containers when running
+	// this guide. Defaults to the list of networks specified for presteps
+	// (once we have a solution for cuelang.org/issues/473)
+	Env: [...string]
+
 	Presteps: [...#Prestep]
 
 	// Delims are the delimiters used in the guide prose and steps
@@ -121,12 +131,11 @@ import "list"
 #PrestepConfig: {
 	Endpoint: string
 
-	// Env defines the list of docker environment values (values that can be
-	// passed to docker run's -e flag) that are passed when a prestep is run
-	// via docker
-	Env: [...string]
-
-	// Env defines the list of docker networks that should be joined when
-	// a prestep is run via docker
+	// Networks defines the list of docker networks to connect to when
+	// running this prestep.
 	Networks: [...string]
+
+	// Env is the environment to pass to docker containers when running
+	// this prestep.
+	Env: [...string]
 }
