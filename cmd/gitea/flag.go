@@ -178,9 +178,10 @@ func (g *serveCmd) usageErr(format string, args ...interface{}) usageErr {
 }
 
 type newUserCmd struct {
-	fs           *flag.FlagSet
-	flagDefaults string
-	fDocker      *bool
+	fs               *flag.FlagSet
+	flagDefaults     string
+	fDocker          *bool
+	fPrestepEndpoint *string
 }
 
 func newNewUserCmd() *newUserCmd {
@@ -188,6 +189,7 @@ func newNewUserCmd() *newUserCmd {
 	res.flagDefaults = newFlagSet("gitea newuser", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fDocker = fs.Bool("docker", false, "process is running within docker container")
+		res.fPrestepEndpoint = fs.String("endpoint", "http://gitea_prestep:8080", "the gitea prestep endpoint to test")
 	})
 	return res
 }

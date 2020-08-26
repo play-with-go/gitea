@@ -2,9 +2,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"time"
+
+	"gopkg.in/retry.v1"
 )
 
 func (r *runner) runNewUser(args []string) error {
@@ -33,8 +37,22 @@ func (r *runner) runNewUser(args []string) error {
 		}
 	}
 
-	rootURL := "http://gitea_prestep:8080"
-	versionResp, err := http.Get(rootURL + "?get-version=1")
+	rootURL := *r.newUserCmd.fPrestepEndpoint
+	strategy := retry.LimitTime(30*time.Second,
+		retry.Exponential{
+			Initial: 10 * time.Millisecond,
+			Factor:  1.5,
+		},
+	)
+	var err error
+	var versionResp *http.Response
+	for a := retry.Start(strategy, nil); a.Next(); {
+		versionResp, err = http.Get(rootURL + "?get-version=1")
+		if err == nil {
+			break
+		}
+		fmt.Fprintln(os.Stderr, "Server not available yet....")
+	}
 	check(err, "failed to get version information from %v: %v", rootURL, err)
 	checkStatus(versionResp, "get version request from %v not successful: %v", rootURL)
 
