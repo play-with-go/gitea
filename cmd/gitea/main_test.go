@@ -30,7 +30,7 @@ type testRunner struct {
 func newTestRunner(t *testing.T) *testRunner {
 	tr := &testRunner{
 		T:                     t,
-		envComposeProjectName: fmt.Sprintf("test%v", time.Now().UnixNano()),
+		envComposeProjectName: fmt.Sprintf("gitea_test%v", time.Now().UnixNano()),
 	}
 	listOut, _ := tr.mustRunCmd(exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea"))
 	root := strings.TrimSpace(string(listOut))
@@ -61,6 +61,11 @@ func TestNewUser(t *testing.T) {
 		main()
 	}
 	tr := newTestRunner(t)
+	// Install gitea into the cache
+	installGitea := exec.Command("go", "install", "github.com/play-with-go/gitea/cmd/gitea")
+	installGitea.Env = append(os.Environ(), "GOBIN="+filepath.Join(tr.root, ".cache"))
+	tr.mustRunCmd(installGitea)
+
 	// Start the docker-compose instance in the background
 	tr.mustRunDockerCompose("up", "-t", "0", "-d")
 
