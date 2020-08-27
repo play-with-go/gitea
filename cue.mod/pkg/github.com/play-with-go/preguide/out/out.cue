@@ -3,6 +3,7 @@ package out
 import "github.com/play-with-go/preguide"
 
 #GuideOutput: {
+	Delims: [string, string]
 	Presteps: [...#Prestep]
 	Terminals: [...#Terminal]
 	Scenarios: [...#Scenario]
@@ -31,6 +32,10 @@ _#stepCommon: {
 	Path:    string
 	Args:    _
 	Version: string
+
+	// Variables is the set of environment variables that resulted
+	// from the execution of the prestep
+	Variables: [...string]
 }
 
 #LangSteps: {
@@ -69,8 +74,9 @@ _#stepCommon: {
 
 #UploadStep: {
 	_#stepCommon
-	Source: string
-	Target: string
+	Language: string
+	Source:   string
+	Target:   string
 }
 
 // GuideStructures maps a guide name to its #GuideStructure
@@ -82,6 +88,7 @@ _#stepCommon: {
 // conslidate at some point. The main difference is that
 // GuideStructure is a function of the input types.
 #GuideStructure: {
+	Delims: [string, string]
 	Presteps: [...preguide.#Prestep]
 	Terminals: [...preguide.#Terminal]
 	Scenarios: [...preguide.#Scenario]
