@@ -9,7 +9,7 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/kr/pretty v0.2.0
 	github.com/myitcv/docker-compose v0.0.0-20200623052903-c60483a3250f
-	github.com/play-with-go/preguide v0.0.0-20200901132516-efacc1315e70
+	github.com/play-with-go/preguide v0.0.0-20200903100314-03754f51d880
 	gopkg.in/retry.v1 v1.0.3
 	mvdan.cc/dockexec v0.0.0-20200617140021-ca98d4465984
 )
