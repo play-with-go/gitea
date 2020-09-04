@@ -308,15 +308,17 @@ func (r *runner) addReposMirrorHook(repos []userRepo) {
 }
 
 func (r *runner) createGitHubRepos(repos []userRepo) {
+	main := "main"
 	for _, repo := range repos {
 		no := false
 		desc := fmt.Sprintf("User guide %v", repo.Name)
 		_, resp, err := r.github.Repositories.Create(context.Background(), UserGuidesRepo, &github.Repository{
-			Name:        &repo.Name,
-			Description: &desc,
-			HasIssues:   &no,
-			HasWiki:     &no,
-			HasProjects: &no,
+			Name:          &repo.Name,
+			Description:   &desc,
+			HasIssues:     &no,
+			HasWiki:       &no,
+			HasProjects:   &no,
+			DefaultBranch: &main,
 		})
 		check(err, "failed to create GitHub repo: %v\n%v", err, resp.Status)
 	}
