@@ -35,8 +35,8 @@ services:
     volumes:
       - ./app.ini:/data/gitea/conf/app.ini:ro
       - gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
+      # - /etc/timezone:/etc/timezone:ro
+      # - /etc/localtime:/etc/localtime:ro
 
   gitea_prestep:
     # Requires the playwithgo image in order that the custom CA can
