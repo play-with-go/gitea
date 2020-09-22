@@ -13,7 +13,7 @@ setenv() {
 
 td=$(mktemp -d)
 trap "rm -rf $td" EXIT
-mkcert -cert-file $td/cert.pem -key-file $td/key.pem play-with-go.dev "*.play-with-go.dev"
+mkcert -cert-file $td/cert.pem -key-file $td/key.pem gopher.live "*.gopher.live"
 
 setenv PLAYWITHGODEV_CERT_FILE $td/cert.pem
 setenv PLAYWITHGODEV_KEY_FILE $td/key.pem

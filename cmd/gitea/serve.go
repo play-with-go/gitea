@@ -147,13 +147,13 @@ func (r *runner) removeOldRepos() {
 	}
 	now := time.Now()
 	for {
-		repos, err := r.client.ListUserRepos(UserGuidesRepo, opt)
-		check(err, "failed to list repos: %v", err)
+		repos, err := r.gitea.ListUserRepos(GiteaOrg, opt)
+		check(err, "failed to list repos via %v: %v", *r.fRootURL, err)
 		for _, repo := range repos {
 			if delta := now.Sub(repo.Created); delta > 3*time.Hour {
-				err := r.client.DeleteRepo(UserGuidesRepo, repo.Name)
-				check(err, "failed to delete repo %v/%v: %v", UserGuidesRepo, repo.Name, err)
-				fmt.Fprintf(os.Stderr, "deleted repo %v/%v (was %v old)\n", UserGuidesRepo, repo.Name, delta)
+				err := r.gitea.DeleteRepo(GiteaOrg, repo.Name)
+				check(err, "failed to delete repo %v/%v: %v", GiteaOrg, repo.Name, err)
+				fmt.Fprintf(os.Stderr, "deleted repo %v/%v (was %v old)\n", GiteaOrg, repo.Name, delta)
 			}
 		}
 		if len(repos) < opt.PageSize {
@@ -171,14 +171,14 @@ func (r *runner) removeOldUsers() {
 	}
 	now := time.Now()
 	for {
-		users, err := r.client.AdminListUsers(opt)
+		users, err := r.gitea.AdminListUsers(opt)
 		check(err, "failed to list users: %v", err)
 		for _, user := range users {
 			if user.IsAdmin {
 				continue
 			}
 			if delta := now.Sub(user.Created); delta > 3*time.Hour {
-				err := r.client.AdminDeleteUser(user.UserName)
+				err := r.gitea.AdminDeleteUser(user.UserName)
 				check(err, "failed to delete user %v: %v", user.UserName, err)
 				fmt.Fprintf(os.Stderr, "deleted user %v (was %v old)\n", user.UserName, delta)
 			}
@@ -225,11 +225,11 @@ func (r *runner) createUser() *userPassword {
 		no := false
 		args := giteasdk.CreateUserOption{
 			Username:           username,
-			Email:              username + "@play-with-go.dev",
+			Email:              username + "@gopher.live",
 			Password:           password.String(),
 			MustChangePassword: &no,
 		}
-		user, err = r.client.AdminCreateUser(args)
+		user, err = r.gitea.AdminCreateUser(args)
 		if err == nil {
 			return &userPassword{
 				User:     user,
@@ -258,7 +258,7 @@ repos:
 				Name:    name,
 				Private: true,
 			}
-			repo, err = r.client.AdminCreateRepo(UserGuidesRepo, args)
+			repo, err = r.gitea.AdminCreateRepo(GiteaOrg, args)
 			if err == nil {
 				res = append(res, userRepo{
 					repoSpec:   repoSpec,
@@ -280,7 +280,7 @@ type userRepo struct {
 func (r *runner) addUserCollabRepos(repos []userRepo, user *userPassword) {
 	for _, repo := range repos {
 		args := giteasdk.AddCollaboratorOption{}
-		err := r.client.AddCollaborator(UserGuidesRepo, repo.Name, user.UserName, args)
+		err := r.gitea.AddCollaborator(GiteaOrg, repo.Name, user.UserName, args)
 		check(err, "failed to add user as collaborator: %v", err)
 	}
 }
@@ -306,7 +306,7 @@ func (r *runner) addReposMirrorHook(repos []userRepo) {
 		args := giteasdk.EditGitHookOption{
 			Content: hook.String(),
 		}
-		err = r.client.EditRepoGitHook(UserGuidesRepo, repo.Name, "post-receive", args)
+		err = r.gitea.EditRepoGitHook(GiteaOrg, repo.Name, "post-receive", args)
 		check(err, "failed to edit repo git hook: %v", err)
 	}
 }
@@ -316,7 +316,7 @@ func (r *runner) createGitHubRepos(repos []userRepo) {
 	for _, repo := range repos {
 		no := false
 		desc := fmt.Sprintf("User guide %v", repo.Name)
-		_, resp, err := r.github.Repositories.Create(context.Background(), UserGuidesRepo, &github.Repository{
+		_, resp, err := r.github.Repositories.Create(context.Background(), GitHubOrg, &github.Repository{
 			Name:          &repo.Name,
 			Description:   &desc,
 			HasIssues:     &no,

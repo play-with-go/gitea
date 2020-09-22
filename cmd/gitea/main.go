@@ -19,7 +19,8 @@ const (
 	EnvGithubUser = "PLAYWITHGODEV_GITHUB_USER"
 	EnvGithubPAT  = "PLAYWITHGODEV_GITHUB_PAT"
 
-	UserGuidesRepo = "userguides"
+	GiteaOrg  = "x"
+	GitHubOrg = "userguides"
 )
 
 type runner struct {
@@ -29,7 +30,7 @@ type runner struct {
 	serveCmd   *serveCmd
 	newUserCmd *newUserCmd
 
-	client *gitea.Client
+	gitea *gitea.Client
 
 	github *github.Client
 }
@@ -45,8 +46,8 @@ func (r *runner) mainerr() (err error) {
 		return usageErr{err, r.rootCmd}
 	}
 
-	r.client = gitea.NewClient(*r.fRootURL, "")
-	r.client.SetBasicAuth(os.Getenv(EnvRootUser), os.Getenv(EnvRootPassword))
+	r.gitea = gitea.NewClient(*r.fRootURL, "")
+	r.gitea.SetBasicAuth(os.Getenv(EnvRootUser), os.Getenv(EnvRootPassword))
 
 	auth := github.BasicAuthTransport{
 		Username: os.Getenv(EnvGithubUser),

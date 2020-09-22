@@ -28,7 +28,7 @@ func (r *runner) runPre(args []string) error {
 		},
 	)
 	for a := retry.Start(strategy, nil); a.Next(); {
-		_, err = r.client.ServerVersion()
+		_, err = r.gitea.ServerVersion()
 		if err == nil {
 			break
 		}
@@ -37,10 +37,10 @@ func (r *runner) runPre(args []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = r.client.CreateOrg(gitea.CreateOrgOption{
-		UserName:   UserGuidesRepo,
+	_, err = r.gitea.CreateOrg(gitea.CreateOrgOption{
+		UserName:   GiteaOrg,
 		Visibility: "private",
 	})
-	check(err, "failed to create %v organisation: %v", UserGuidesRepo, err)
+	check(err, "failed to create %v organisation: %v", GiteaOrg, err)
 	return nil
 }
