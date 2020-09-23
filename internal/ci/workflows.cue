@@ -18,7 +18,7 @@ test: json.#Workflow & {
 		PLAYWITHGODEV_KEY_FILE:      "${{ secrets.PLAYWITHGODEV_KEY_FILE }}"
 	}
 	on: {
-		push: branches: ["master"]
+		push: branches: ["main"]
 		pull_request: branches: ["**"]
 	}
 	jobs: test: {
