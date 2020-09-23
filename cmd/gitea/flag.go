@@ -87,7 +87,7 @@ func newRootCmd() *rootCmd {
 	res.flagDefaults = newFlagSet("gitea", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fDebug = fs.Bool("debug", false, "include debug output")
-		res.fRootURL = fs.String("rootURL", "https://play-with-go.dev", "root URL for all requests")
+		res.fRootURL = fs.String("rootURL", "https://api.gopher.live", "root URL for all requests")
 	})
 	return res
 }
