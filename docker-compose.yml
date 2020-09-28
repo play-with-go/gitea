@@ -8,21 +8,27 @@ volumes:
   gitea:
     driver: local
 
+volumes:
+  sessions:
+  networks:
+  gitea:
+    driver: local
+
 services:
   nginx:
-    image: nginx:1.18.0
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    environment:
+      - PLAYWITHGODEV_CERT_FILE
+      - PLAYWITHGODEV_KEY_FILE
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx.sh:/run.sh:ro
-    command: ["bash", "/run.sh"]
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       gitea:
         aliases:
           - gopher.live
           - api.gopher.live
-    environment:
-      - PLAYWITHGODEV_CERT_FILE
-      - PLAYWITHGODEV_KEY_FILE
 
   gitea:
     image: gitea/gitea:1.12.4
@@ -34,26 +40,20 @@ services:
       - PLAYWITHGODEV_GITHUB_USER
       - PLAYWITHGODEV_GITHUB_PAT
     volumes:
-      - ./app.ini:/data/gitea/conf/app.ini:ro
+      - ./docker/gitea/app.ini:/data/gitea/conf/app.ini:ro
       - gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
 
-  gitea_prestep:
-    # Requires the playwithgo image in order that the custom CA can
-    # be provided and then put in place as part of the entrypoint
-    image: "playwithgo/go1.15.1@sha256:009b09b0b12874cb1dd362bc2471e39d430f6c2c7cac47dc9db2ab7a4290e59b"
+  cmd_gitea:
+    build:
+      context: .
+      dockerfile: ./docker/cmd_gitea/Dockerfile
     networks:
       - gitea
-    command: /bin/sh -c 'if [ -e /runbin/gitea ]; then /runbin/gitea serve; else go run ./cmd/gitea serve; fi'
     environment:
       - PLAYWITHGODEV_ROOT_USER
       - PLAYWITHGODEV_ROOT_PASSWORD
       - PLAYWITHGODEV_GITHUB_USER
       - PLAYWITHGODEV_GITHUB_PAT
-      - PLAYWITHGO_NOGOPHER=true
-      - PLAYWITHGO_ROOTCA
-    volumes:
-      - .:/start
-    working_dir: /start
+      - GOPHERLIVE_ROOTCA
+    command: ["/runbin/gitea", "serve"]
 

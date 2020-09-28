@@ -24,7 +24,7 @@ func (r *runner) runNewUser(args []string) error {
 	// ourselves in docker passing that flag. That is to say, the -docker
 	// flag indicates we are running docker.
 	if !*r.newUserCmd.fDocker {
-		self := r.buildSelfDockerCmd(nil, "newuser", "-docker")
+		self := r.buildSelfDockerCmd(nil, "/runbin/gitea", "newuser", "-docker")
 		err := self.Run()
 		check(err, "failed to run [%v]: %v", self, err)
 		return nil
