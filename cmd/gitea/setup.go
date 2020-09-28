@@ -26,7 +26,8 @@ func (r *runner) runSetup(args []string) error {
 		"-e", "PLAYWITHGODEV_ROOT_PASSWORD",
 		"-e", "PLAYWITHGODEV_GITHUB_USER",
 		"-e", "PLAYWITHGODEV_GITHUB_PAT",
-	}, "pre")
+		"-e", "GOPHERLIVE_ROOTCA",
+	}, "/runbin/gitea", "pre")
 	err = org.Run()
 	check(err, "failed to run [%v]: %v", org, err)
 

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -26,8 +25,6 @@ const (
 type testRunner struct {
 	*testing.T
 	root                  string
-	envComposeFile        string
-	envGoModCache         string
 	envComposeProjectName string
 }
 
@@ -37,24 +34,7 @@ func newTestRunner(t *testing.T) *testRunner {
 		envComposeProjectName: fmt.Sprintf("gitea_test%v", time.Now().UnixNano()),
 	}
 	listOut, _ := tr.mustRunCmd(exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/play-with-go/gitea"))
-	root := strings.TrimSpace(string(listOut))
-	composeFiles := []string{
-		os.Getenv(envComposeFile),
-		filepath.Join(root, "docker-compose.yml"),
-		filepath.Join(root, "docker-compose-playwithgo.yml"),
-	}
-	var goenv struct {
-		GOPATH string
-	}
-	envOut, _ := tr.mustRunCmd(exec.Command("go", "env", "-json"))
-	if err := json.Unmarshal(envOut, &goenv); err != nil {
-		t.Fatalf("failed to unmarshal go env output (%q): %v", envOut, err)
-	}
-	gopath0 := strings.Split(goenv.GOPATH, string(os.PathListSeparator))[0]
-
-	tr.root = root
-	tr.envComposeFile = strings.Join(composeFiles, string(os.PathListSeparator))
-	tr.envGoModCache = filepath.Join(gopath0, "pkg", "mod")
+	tr.root = strings.TrimSpace(string(listOut))
 	return tr
 }
 
@@ -65,10 +45,8 @@ func TestNewUser(t *testing.T) {
 		main()
 	}
 	tr := newTestRunner(t)
-	// Install gitea into the cache
-	installGitea := exec.Command("go", "install", "github.com/play-with-go/gitea/cmd/gitea")
-	installGitea.Env = append(os.Environ(), "GOBIN="+filepath.Join(tr.root, ".cache"))
-	tr.mustRunCmd(installGitea)
+	// Build the docker-compose setup
+	tr.mustRunDockerCompose("build")
 
 	// Start the docker-compose instance in the background
 	tr.mustRunDockerCompose("up", "-t", "0", "-d")
@@ -116,10 +94,6 @@ func TestNewUser(t *testing.T) {
 func (tr *testRunner) mustRunDockerCompose(args ...string) ([]byte, []byte) {
 	c := exec.Command("docker-compose", args...)
 	c.Dir = tr.root
-	c.Env = append(os.Environ(),
-		"COMPOSE_FILE="+tr.envComposeFile,
-		"GOMODCACHE="+tr.envGoModCache,
-	)
 	return tr.mustRunCmd(c)
 }
 
