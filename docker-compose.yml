@@ -8,37 +8,14 @@ volumes:
   gitea:
     driver: local
 
-volumes:
-  sessions:
-  networks:
-  gitea:
-    driver: local
-
 services:
-  nginx:
-    build:
-      context: .
-      dockerfile: ./docker/nginx/Dockerfile
-    environment:
-      - PLAYWITHGODEV_CERT_FILE
-      - PLAYWITHGODEV_KEY_FILE
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      gitea:
-        aliases:
-          - gopher.live
-          - api.gopher.live
-
   gitea:
-    image: gitea/gitea:1.12.4
+    image: gitea/gitea:1.12.5
     networks:
       - gitea
     environment:
       - USER_UID=1000
       - USER_GID=1000
-      - PLAYWITHGODEV_GITHUB_USER
-      - PLAYWITHGODEV_GITHUB_PAT
     volumes:
       - ./docker/gitea/app.ini:/data/gitea/conf/app.ini:ro
       - gitea:/data
@@ -50,10 +27,8 @@ services:
     networks:
       - gitea
     environment:
-      - PLAYWITHGODEV_ROOT_USER
-      - PLAYWITHGODEV_ROOT_PASSWORD
-      - PLAYWITHGODEV_GITHUB_USER
-      - PLAYWITHGODEV_GITHUB_PAT
-      - GOPHERLIVE_ROOTCA
+      - PLAYWITHGODEV_CONTRIBUTOR_USER
+      - PLAYWITHGODEV_CONTRIBUTOR_PASSWORD
+      - GITEA_ROOT_URL
     command: ["/runbin/gitea", "serve"]
 

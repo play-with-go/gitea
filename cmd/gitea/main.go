@@ -7,32 +7,27 @@ package main
 
 import (
 	"os"
-
-	"code.gitea.io/sdk/gitea"
-	"github.com/google/go-github/v31/github"
 )
 
 const (
 	EnvRootUser     = "PLAYWITHGODEV_ROOT_USER"
 	EnvRootPassword = "PLAYWITHGODEV_ROOT_PASSWORD"
 
-	EnvGithubUser = "PLAYWITHGODEV_GITHUB_USER"
-	EnvGithubPAT  = "PLAYWITHGODEV_GITHUB_PAT"
+	EnvContributorUser     = "PLAYWITHGODEV_CONTRIBUTOR_USER"
+	EnvContributorPassword = "PLAYWITHGODEV_CONTRIBUTOR_PASSWORD"
 
 	GiteaOrg  = "x"
 	GitHubOrg = "userguides"
+
+	TemporaryUserFullName = "A really very temporary user"
 )
 
 type runner struct {
 	*rootCmd
-	setupCmd   *setupCmd
-	preCmd     *preCmd
-	serveCmd   *serveCmd
-	newUserCmd *newUserCmd
-
-	gitea *gitea.Client
-
-	github *github.Client
+	preCmd            *preCmd
+	serveCmd          *serveCmd
+	newContributorCmd *newContributorCmd
+	reapCmd           *reapCmd
 }
 
 func newRunner() *runner {
@@ -46,29 +41,20 @@ func (r *runner) mainerr() (err error) {
 		return usageErr{err, r.rootCmd}
 	}
 
-	r.gitea = gitea.NewClient(*r.fRootURL, "")
-	r.gitea.SetBasicAuth(os.Getenv(EnvRootUser), os.Getenv(EnvRootPassword))
-
-	auth := github.BasicAuthTransport{
-		Username: os.Getenv(EnvGithubUser),
-		Password: os.Getenv(EnvGithubPAT),
-	}
-	r.github = github.NewClient(auth.Client())
-
 	args := r.rootCmd.fs.Args()
 	if len(args) == 0 {
 		return r.rootCmd.usageErr("missing command")
 	}
 	cmd := args[0]
 	switch cmd {
-	case "setup":
-		return r.runSetup(args[1:])
 	case "pre":
-		return r.runPre(args[1:])
+		return r.preCmd.run(args[1:])
 	case "serve":
-		return r.runServe(args[1:])
-	case "newuser":
-		return r.runNewUser(args[1:])
+		return r.serveCmd.run(args[1:])
+	case "reap":
+		return r.reapCmd.run(args[1:])
+	case "newcontributor":
+		return r.newContributorCmd.run(args[1:])
 	default:
 		return r.rootCmd.usageErr("unknown command: " + cmd)
 	}

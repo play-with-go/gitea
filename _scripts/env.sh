@@ -7,9 +7,7 @@ source "$( command cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd 
 
 modRoot="$(go list -m -f {{.Dir}})"
 
-rootCA="$(cat $(mkcert -CAROOT)/rootCA.pem)"
 $export COMPOSE_PROJECT_NAME gitea
 $export PATH "$modRoot/.bin:$PATH"
-$export GOPHERLIVE_ROOTCA "$rootCA"
 $export COMPOSE_DOCKER_CLI_BUILD 1
 $export DOCKER_BUILDKIT 1
