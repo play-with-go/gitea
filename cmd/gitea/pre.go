@@ -5,40 +5,23 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"time"
 
 	"code.gitea.io/sdk/gitea"
-	"gopkg.in/retry.v1"
 )
 
-func (r *runner) runPre(args []string) error {
-	if err := r.preCmd.fs.Parse(args); err != nil {
-		return r.preCmd.usageErr("failed to parse flags: %v", err)
+func (pc *preCmd) run(args []string) error {
+	if err := pc.fs.Parse(args); err != nil {
+		return pc.usageErr("failed to parse flags: %v", err)
 	}
-	// Try the version endpoint with backoff until success or timeout
-	wait, err := time.ParseDuration(*r.preCmd.fWait)
-	check(err, "failed to parse duration from -wait flag: %v", err)
 
-	strategy := retry.LimitTime(wait,
-		retry.Exponential{
-			Initial: 10 * time.Millisecond,
-			Factor:  1.5,
-		},
-	)
-	for a := retry.Start(strategy, nil); a.Next(); {
-		_, err = r.gitea.ServerVersion()
-		if err == nil {
-			break
-		}
-		fmt.Fprintln(os.Stderr, "Server not available yet....")
-	}
-	if err != nil {
-		return err
-	}
-	_, err = r.gitea.CreateOrg(gitea.CreateOrgOption{
-		UserName:   GiteaOrg,
+	// Requires real root credentials
+	client, err := gitea.NewClient(*pc.fRootURL)
+	check(err, "failed to create client: %v", err)
+	client.SetBasicAuth(os.Getenv(EnvRootUser), os.Getenv(EnvRootPassword))
+
+	_, _, err = client.CreateOrg(gitea.CreateOrgOption{
+		Name:       GiteaOrg,
 		Visibility: "private",
 	})
 	check(err, "failed to create %v organisation: %v", GiteaOrg, err)

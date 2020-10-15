@@ -11,6 +11,9 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
+
+	"code.gitea.io/sdk/gitea"
 )
 
 type usageErr struct {
@@ -26,10 +29,10 @@ func main1() int {
 	r := newRunner()
 
 	r.rootCmd = newRootCmd()
-	r.setupCmd = newSetupCmd()
-	r.preCmd = newPreCmd()
-	r.serveCmd = newServeCmd()
-	r.newUserCmd = newNewUserCmd()
+	r.preCmd = newPreCmd(r)
+	r.serveCmd = newServeCmd(r)
+	r.newContributorCmd = newNewContributorCmd(r)
+	r.reapCmd = newReapCmd(r)
 
 	err := r.mainerr()
 	if err == nil {
@@ -87,9 +90,16 @@ func newRootCmd() *rootCmd {
 	res.flagDefaults = newFlagSet("gitea", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fDebug = fs.Bool("debug", false, "include debug output")
-		res.fRootURL = fs.String("rootURL", "https://api.gopher.live", "root URL for all requests")
+		res.fRootURL = fs.String("rootURL", envOrVal("GITEA_ROOT_URL", "https://api.gopher.live"), "root URL for all requests")
 	})
 	return res
+}
+
+func envOrVal(env string, val string) string {
+	if v, ok := os.LookupEnv(env); ok {
+		return v
+	}
+	return val
 }
 
 func (r *rootCmd) usage() string {
@@ -105,38 +115,15 @@ func (r *rootCmd) usageErr(format string, args ...interface{}) usageErr {
 	return usageErr{fmt.Errorf(format, args...), r}
 }
 
-type setupCmd struct {
-	fs           *flag.FlagSet
-	flagDefaults string
-}
-
-func newSetupCmd() *setupCmd {
-	res := &setupCmd{}
-	res.flagDefaults = newFlagSet("gitea setup", func(fs *flag.FlagSet) {
-		res.fs = fs
-	})
-	return res
-}
-
-func (i *setupCmd) usage() string {
-	return fmt.Sprintf(`
-usage: gitea setup
-
-%s`[1:], i.flagDefaults)
-}
-
-func (i *setupCmd) usageErr(format string, args ...interface{}) usageErr {
-	return usageErr{fmt.Errorf(format, args...), i}
-}
-
 type preCmd struct {
+	*runner
 	fs           *flag.FlagSet
 	flagDefaults string
 	fWait        *string
 }
 
-func newPreCmd() *preCmd {
-	res := &preCmd{}
+func newPreCmd(r *runner) *preCmd {
+	res := &preCmd{runner: r}
 	res.flagDefaults = newFlagSet("gitea pre", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fWait = fs.String("wait", "100s", "max time to wait for API server")
@@ -156,13 +143,16 @@ func (g *preCmd) usageErr(format string, args ...interface{}) usageErr {
 }
 
 type serveCmd struct {
+	*runner
 	fs           *flag.FlagSet
 	flagDefaults string
 	fPort        *string
+
+	client *gitea.Client
 }
 
-func newServeCmd() *serveCmd {
-	res := &serveCmd{}
+func newServeCmd(r *runner) *serveCmd {
+	res := &serveCmd{runner: r}
 	res.flagDefaults = newFlagSet("gitea serve", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fPort = fs.String("port", "8080", "port on which to listen")
@@ -181,31 +171,65 @@ func (g *serveCmd) usageErr(format string, args ...interface{}) usageErr {
 	return usageErr{fmt.Errorf(format, args...), g}
 }
 
-type newUserCmd struct {
-	fs               *flag.FlagSet
-	flagDefaults     string
-	fDocker          *bool
-	fPrestepEndpoint *string
+type newContributorCmd struct {
+	*runner
+	fs           *flag.FlagSet
+	fEmail       *string
+	fFullName    *string
+	fUsername    *string
+	flagDefaults string
 }
 
-func newNewUserCmd() *newUserCmd {
-	res := &newUserCmd{}
+func newNewContributorCmd(r *runner) *newContributorCmd {
+	res := &newContributorCmd{runner: r}
 	res.flagDefaults = newFlagSet("gitea newuser", func(fs *flag.FlagSet) {
 		res.fs = fs
-		res.fDocker = fs.Bool("docker", false, "process is running within docker container")
-		res.fPrestepEndpoint = fs.String("endpoint", "http://cmd_gitea:8080", "the gitea prestep endpoint to test")
+		res.fEmail = fs.String("email", "", "New contributor email address")
+		res.fUsername = fs.String("username", "", "New contributor username")
+		res.fFullName = fs.String("fullname", "", "New contributor full name")
 	})
 	return res
 }
 
-func (i *newUserCmd) usage() string {
+func (i *newContributorCmd) usage() string {
 	return fmt.Sprintf(`
-usage: gitea newuser
+usage: gitea newcontributor
 
 %s`[1:], i.flagDefaults)
 }
 
-func (i *newUserCmd) usageErr(format string, args ...interface{}) usageErr {
+func (i *newContributorCmd) usageErr(format string, args ...interface{}) usageErr {
+	return usageErr{fmt.Errorf(format, args...), i}
+}
+
+type reapCmd struct {
+	*runner
+	fs           *flag.FlagSet
+	fAge         *string
+	flagDefaults string
+
+	now    time.Time
+	age    time.Duration
+	client *gitea.Client
+}
+
+func newReapCmd(r *runner) *reapCmd {
+	res := &reapCmd{runner: r}
+	res.flagDefaults = newFlagSet("gitea newuser", func(fs *flag.FlagSet) {
+		res.fs = fs
+		res.fAge = fs.String("age", "3h", "Age beyond which users and repositories will be reaped")
+	})
+	return res
+}
+
+func (i *reapCmd) usage() string {
+	return fmt.Sprintf(`
+usage: gitea reap
+
+%s`[1:], i.flagDefaults)
+}
+
+func (i *reapCmd) usageErr(format string, args ...interface{}) usageErr {
 	return usageErr{fmt.Errorf(format, args...), i}
 }
 

@@ -12,12 +12,12 @@ COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/go go build -o cmd/gitea/gitea ./cmd/gitea
 
-# playwithgo/customca
-FROM playwithgo/customca@sha256:590cf82229b9338a48520c4042f718b8e11380e389cfc4be21791736e9ff94ea
+# busybox:1.32.0
+FROM busybox@sha256:d9ce5c47b31f3ca5626a3afe8e17c69169eef194ba8f9d68ade898759f49c907
 
 RUN mkdir /runbin
 
 COPY --from=stage1 /go/cmd/gitea/gitea /runbin
 COPY ./docker/cmd_gitea/playwithgo-entrypoint.sh /playwithgo-entrypoint.sh
 
-ENTRYPOINT ["/usr/bin/entrypoint.sh", "/playwithgo-entrypoint.sh"]
+ENTRYPOINT ["/playwithgo-entrypoint.sh"]

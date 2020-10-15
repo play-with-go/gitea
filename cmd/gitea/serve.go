@@ -7,8 +7,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -19,16 +17,16 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"strings"
-	"text/template"
+	"syscall"
 	"time"
 
 	giteasdk "code.gitea.io/sdk/gitea"
-	"github.com/google/go-github/v31/github"
 	"github.com/play-with-go/gitea"
 	"github.com/play-with-go/preguide"
+	"gopkg.in/retry.v1"
 )
 
-func (r *runner) runServe(args []string) error {
+func (sc *serveCmd) run(args []string) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals)
 
@@ -39,6 +37,26 @@ func (r *runner) runServe(args []string) error {
 	buildInfoJSON, err := json.MarshalIndent(buildInfo, "", "  ")
 	check(err, "failed to JSON marshal build info: %v", err)
 
+	clientCreate := make(chan int)
+	go func() {
+		strategy := retry.LimitTime(5*time.Second,
+			retry.Exponential{
+				Initial: 100 * time.Millisecond,
+				Factor:  1.5,
+			},
+		)
+		for a := retry.Start(strategy, nil); a.Next(); {
+			fmt.Printf("Connecting to %v\n", *sc.fRootURL)
+			sc.client, err = giteasdk.NewClient(*sc.fRootURL)
+			if err == nil {
+				break
+			}
+		}
+		check(err, "failed to create root client: %v", err)
+		sc.client.SetBasicAuth(os.Getenv(EnvContributorUser), os.Getenv(EnvContributorPassword))
+		close(clientCreate)
+	}()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(resp http.ResponseWriter, req *http.Request) {
 		if req.URL.Query().Get("get-version") != "1" || req.Method != "GET" {
@@ -46,9 +64,10 @@ func (r *runner) runServe(args []string) error {
 			return
 		}
 		fmt.Fprintf(resp, "%s", buildInfoJSON)
-		return
 	})
 	mux.HandleFunc("/newuser", func(resp http.ResponseWriter, req *http.Request) {
+		<-clientCreate
+		// Requires contriburo credentials
 		if req.Method != "POST" {
 			resp.WriteHeader(http.StatusBadRequest)
 			return
@@ -61,7 +80,7 @@ func (r *runner) runServe(args []string) error {
 			return
 		}
 
-		res := r.newUser(args)
+		res := sc.newUser(args)
 
 		enc := json.NewEncoder(resp)
 		if err := enc.Encode(res); err != nil {
@@ -72,7 +91,7 @@ func (r *runner) runServe(args []string) error {
 		}
 	})
 
-	addr := fmt.Sprintf(":%v", *r.serveCmd.fPort)
+	addr := fmt.Sprintf(":%v", *sc.fPort)
 
 	srv := &http.Server{
 		Handler: mux,
@@ -85,7 +104,7 @@ func (r *runner) runServe(args []string) error {
 	errors := make(chan error)
 	go func() {
 		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
 		<-sigint
 		if err := srv.Shutdown(context.Background()); err != nil {
 			errors <- err
@@ -102,25 +121,15 @@ func (r *runner) runServe(args []string) error {
 	return nil
 }
 
-func (r *runner) newUser(args *gitea.NewUser) preguide.PrestepOut {
-	// Tidy up old repos
-	r.removeOldRepos()
-	r.removeOldUsers()
-
+func (sc *serveCmd) newUser(args *gitea.NewUser) preguide.PrestepOut {
 	// User account -> username (gitea)
-	user := r.createUser()
+	user := sc.createUser()
 
-	// Create gitea repository in userguides
-	repos := r.createUserRepos(user, args.Repos)
+	// Create gitea repositories in userguides
+	repos := sc.createUserRepos(user, args.Repos)
 
 	// Add user as a collab on that repo
-	r.addUserCollabRepos(repos, user)
-
-	// Add mirroring to repository
-	r.addReposMirrorHook(repos)
-
-	// create GitHub repository
-	r.createGitHubRepos(repos)
+	sc.addUserCollabRepos(repos, user)
 
 	res := preguide.PrestepOut{
 		Vars: []string{
@@ -139,60 +148,9 @@ type userPassword struct {
 	password string
 }
 
-func (r *runner) removeOldRepos() {
-	opt := giteasdk.ListReposOptions{
-		ListOptions: giteasdk.ListOptions{
-			PageSize: 10,
-		},
-	}
-	now := time.Now()
-	for {
-		repos, err := r.gitea.ListUserRepos(GiteaOrg, opt)
-		check(err, "failed to list repos via %v: %v", *r.fRootURL, err)
-		for _, repo := range repos {
-			if delta := now.Sub(repo.Created); delta > 3*time.Hour {
-				err := r.gitea.DeleteRepo(GiteaOrg, repo.Name)
-				check(err, "failed to delete repo %v/%v: %v", GiteaOrg, repo.Name, err)
-				fmt.Fprintf(os.Stderr, "deleted repo %v/%v (was %v old)\n", GiteaOrg, repo.Name, delta)
-			}
-		}
-		if len(repos) < opt.PageSize {
-			break
-		}
-		opt.Page++
-	}
-}
-
-func (r *runner) removeOldUsers() {
-	opt := giteasdk.AdminListUsersOptions{
-		ListOptions: giteasdk.ListOptions{
-			PageSize: 10,
-		},
-	}
-	now := time.Now()
-	for {
-		users, err := r.gitea.AdminListUsers(opt)
-		check(err, "failed to list users: %v", err)
-		for _, user := range users {
-			if user.IsAdmin {
-				continue
-			}
-			if delta := now.Sub(user.Created); delta > 3*time.Hour {
-				err := r.gitea.AdminDeleteUser(user.UserName)
-				check(err, "failed to delete user %v: %v", user.UserName, err)
-				fmt.Fprintf(os.Stderr, "deleted user %v (was %v old)\n", user.UserName, delta)
-			}
-		}
-		if len(users) < opt.PageSize {
-			break
-		}
-		opt.Page++
-	}
-}
-
 var start = time.Date(2019, time.December, 19, 12, 00, 0, 0, time.UTC)
 
-func (r *runner) genID() string {
+func (sc *serveCmd) genID() string {
 	now := time.Now()
 	diff := (now.UnixNano() - start.UnixNano()) / 1000000
 	bs := make([]byte, binary.MaxVarintLen64)
@@ -207,41 +165,45 @@ func (r *runner) genID() string {
 	return id
 }
 
-func (r *runner) createUser() *userPassword {
+func (sc *serveCmd) createUser() *userPassword {
 	var err error
-	randBytes := make([]byte, 30)
-	n, err := rand.Read(randBytes)
-	if n != len(randBytes) || err != nil {
-		raise("failed to generate random bytes: got %v, err %v", len(randBytes), err)
-	}
-	var password bytes.Buffer
-	enc := base64.NewEncoder(base64.URLEncoding, &password)
-	_, err = enc.Write(randBytes)
-	check(err, "failed to base64 encode password: %v", err)
+	password := randomPassword()
 	// Try 3 times... because 3 is a magic number
 	for i := 0; i < 3; i++ {
 		var user *giteasdk.User
-		username := "u" + r.genID()
+		username := "u" + sc.genID()
 		no := false
+		zero := 0
 		args := giteasdk.CreateUserOption{
+			FullName:           TemporaryUserFullName,
 			Username:           username,
 			Email:              username + "@gopher.live",
-			Password:           password.String(),
+			Password:           password,
 			MustChangePassword: &no,
 		}
-		user, err = r.gitea.AdminCreateUser(args)
-		if err == nil {
-			return &userPassword{
-				User:     user,
-				password: password.String(),
-			}
+		user, _, err = sc.client.AdminCreateUser(args)
+		if err != nil {
+			continue
+		}
+		_, err = sc.client.AdminEditUser(user.UserName, giteasdk.EditUserOption{
+			Email:                   user.Email,
+			FullName:                user.FullName,
+			MaxRepoCreation:         &zero,
+			AllowCreateOrganization: &no,
+			AllowGitHook:            &no,
+		})
+		check(err, "failed to edit user %v: %v", user.UserName, err)
+
+		return &userPassword{
+			User:     user,
+			password: password,
 		}
 	}
 	raise("failed to create user: %v", err)
 	return nil
 }
 
-func (r *runner) createUserRepos(user *userPassword, repos []gitea.Repo) (res []userRepo) {
+func (sc *serveCmd) createUserRepos(user *userPassword, repos []gitea.Repo) (res []userRepo) {
 repos:
 	for _, repoSpec := range repos {
 		var err error
@@ -253,12 +215,12 @@ repos:
 			prefix = repoSpec.Pattern
 		}
 		for j := 0; j < 3; j++ {
-			name := prefix + r.genID() + suffix
+			name := prefix + sc.genID() + suffix
 			args := giteasdk.CreateRepoOption{
 				Name:    name,
-				Private: true,
+				Private: false,
 			}
-			repo, err = r.gitea.AdminCreateRepo(GiteaOrg, args)
+			repo, _, err = sc.client.AdminCreateRepo(GiteaOrg, args)
 			if err == nil {
 				res = append(res, userRepo{
 					repoSpec:   repoSpec,
@@ -277,53 +239,10 @@ type userRepo struct {
 	*giteasdk.Repository
 }
 
-func (r *runner) addUserCollabRepos(repos []userRepo, user *userPassword) {
+func (sc *serveCmd) addUserCollabRepos(repos []userRepo, user *userPassword) {
 	for _, repo := range repos {
 		args := giteasdk.AddCollaboratorOption{}
-		err := r.gitea.AddCollaborator(GiteaOrg, repo.Name, user.UserName, args)
+		_, err := sc.client.AddCollaborator(GiteaOrg, repo.Name, user.UserName, args)
 		check(err, "failed to add user as collaborator: %v", err)
-	}
-}
-
-var gitHookTemplate = template.Must(template.New("t").Parse(`
-#!/bin/bash
-tf=$(mktemp)
-trap "rm $tf" EXIT
-git push --mirror https://{{.User}}:{{.Password}}@github.com/userguides/{{.Repo}}.git > $tf 2>&1 || { cat $tf && false; }
-`[1:]))
-
-func (r *runner) addReposMirrorHook(repos []userRepo) {
-	for _, repo := range repos {
-		var err error
-		var hook bytes.Buffer
-		vals := struct {
-			User     string
-			Password string
-			Repo     string
-		}{os.Getenv(EnvGithubUser), os.Getenv(EnvGithubPAT), repo.Name}
-		err = gitHookTemplate.Execute(&hook, vals)
-		check(err, "failed to execute git hook template: %v", err)
-		args := giteasdk.EditGitHookOption{
-			Content: hook.String(),
-		}
-		err = r.gitea.EditRepoGitHook(GiteaOrg, repo.Name, "post-receive", args)
-		check(err, "failed to edit repo git hook: %v", err)
-	}
-}
-
-func (r *runner) createGitHubRepos(repos []userRepo) {
-	main := "main"
-	for _, repo := range repos {
-		no := false
-		desc := fmt.Sprintf("User guide %v", repo.Name)
-		_, resp, err := r.github.Repositories.Create(context.Background(), GitHubOrg, &github.Repository{
-			Name:          &repo.Name,
-			Description:   &desc,
-			HasIssues:     &no,
-			HasWiki:       &no,
-			HasProjects:   &no,
-			DefaultBranch: &main,
-		})
-		check(err, "failed to create GitHub repo: %v\n%v", err, resp.Status)
 	}
 }

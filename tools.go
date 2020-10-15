@@ -7,5 +7,5 @@
 package tools
 
 import (
-	_ "github.com/FiloSottile/mkcert"
+	_ "honnef.co/go/tools/cmd/staticcheck"
 )
