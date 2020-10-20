@@ -49,36 +49,13 @@ func (ncc *newContributorCmd) run(args []string) error {
 	})
 	check(err, "failed to create new contributor %v: %v", *ncc.fUsername, err)
 
-	zero := 0
-
 	// Set further user options
 	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
-		Admin:                   &yes,
-		MaxRepoCreation:         &zero,
-		AllowCreateOrganization: &no,
-		AllowGitHook:            &no,
-		Email:                   user.Email,
-		FullName:                user.FullName,
+		Admin:    &yes,
+		Email:    user.Email,
+		FullName: user.FullName,
 	})
 	check(err, "failed to edit contributor %v: %v", user.UserName, err)
-
-	// Get the organisation owners team
-	teams, _, err := client.ListOrgTeams(GiteaOrg, gitea.ListTeamsOptions{})
-	check(err, "failed to list teams for %v: %v", GiteaOrg, err)
-	var owners *gitea.Team
-	for _, t := range teams {
-		if t.Name == "Owners" {
-			owners = t
-			break
-		}
-	}
-	if owners == nil {
-		raise("failed to find Owners team for %v", GiteaOrg)
-	}
-
-	// Add the new contributor to the owners team
-	_, err = client.AddTeamMember(owners.ID, user.UserName)
-	check(err, "failed to add user %v to team %v: %v", user.UserName, owners.ID, err)
 
 	// Create an access key as the user
 	userClient, err := gitea.NewClient(*ncc.fRootURL)

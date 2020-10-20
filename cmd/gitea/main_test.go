@@ -105,9 +105,6 @@ func TestEverything(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Fatal("Can only run this test on linux (left as a fatal error to ensure we get some coverage)")
 	}
-	if os.Getenv("CGO_ENABLED") != "0" {
-		t.Fatal("Must run this test with CGO_ENABLED=0")
-	}
 	tr := newTestRunner(t)
 
 	// Ensure it's torn down at the end of the test
@@ -133,7 +130,6 @@ func TestEverything(t *testing.T) {
 		"--email", "blah@blah.com",
 	)
 
-	tr.mustRun(tr.self("pre"))
 	tokenJSON, _ := tr.mustRun(tr.self("newcontributor", "-email", "contributor@blah.com", "-fullname", "A Contributor", "-username", "testcontributor"))
 	var token gitea.AccessToken
 	err := json.Unmarshal(tokenJSON, &token)
@@ -238,7 +234,7 @@ func prestepErr() (err error) {
 	client, err := gitea.NewClient("http://gitea:3000")
 	check(err, "failed to create gitea client: %v", err)
 	client.SetBasicAuth(*found["GITEA_USERNAME"], *found["GITEA_PASSWORD"])
-	_, _, err = client.GetRepo("x", *found["REPO1"])
+	_, _, err = client.GetRepo(*found["GITEA_USERNAME"], *found["REPO1"])
 	check(err, "failed to get repo details for %v: %v", *found["REPO1"], err)
 	return nil
 }
@@ -260,7 +256,7 @@ func (tr *testRunner) selfImpl(self string, args ...string) *exec.Cmd {
 		"-e", "GITEA_COMMAND="+self, "-e", "GITEA_ROOT_URL",
 		"-e", "PLAYWITHGODEV_ROOT_USER", "-e", "PLAYWITHGODEV_ROOT_PASSWORD",
 		"--network", tr.envComposeProjectName+"_gitea",
-		"-v", fmt.Sprintf("%v:/giteaself", tr.selfPath), "busybox", "/giteaself")
+		"-v", fmt.Sprintf("%v:/giteaself", tr.selfPath), imageBase, "/giteaself")
 	cmd.Args = append(cmd.Args, args...)
 	return cmd
 }
