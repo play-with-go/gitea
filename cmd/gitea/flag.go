@@ -29,7 +29,6 @@ func main1() int {
 	r := newRunner()
 
 	r.rootCmd = newRootCmd()
-	r.preCmd = newPreCmd(r)
 	r.serveCmd = newServeCmd(r)
 	r.newContributorCmd = newNewContributorCmd(r)
 	r.reapCmd = newReapCmd(r)
@@ -90,7 +89,7 @@ func newRootCmd() *rootCmd {
 	res.flagDefaults = newFlagSet("gitea", func(fs *flag.FlagSet) {
 		res.fs = fs
 		res.fDebug = fs.Bool("debug", false, "include debug output")
-		res.fRootURL = fs.String("rootURL", envOrVal("GITEA_ROOT_URL", "https://api.gopher.live"), "root URL for all requests")
+		res.fRootURL = fs.String("rootURL", envOrVal("GITEA_ROOT_URL", "https://gopher.live"), "root URL for all requests")
 	})
 	return res
 }
@@ -113,33 +112,6 @@ gitea defines the following flags:
 
 func (r *rootCmd) usageErr(format string, args ...interface{}) usageErr {
 	return usageErr{fmt.Errorf(format, args...), r}
-}
-
-type preCmd struct {
-	*runner
-	fs           *flag.FlagSet
-	flagDefaults string
-	fWait        *string
-}
-
-func newPreCmd(r *runner) *preCmd {
-	res := &preCmd{runner: r}
-	res.flagDefaults = newFlagSet("gitea pre", func(fs *flag.FlagSet) {
-		res.fs = fs
-		res.fWait = fs.String("wait", "100s", "max time to wait for API server")
-	})
-	return res
-}
-
-func (g *preCmd) usage() string {
-	return fmt.Sprintf(`
-usage: gitea pre
-
-%s`[1:], g.flagDefaults)
-}
-
-func (g *preCmd) usageErr(format string, args ...interface{}) usageErr {
-	return usageErr{fmt.Errorf(format, args...), g}
 }
 
 type serveCmd struct {

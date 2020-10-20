@@ -9,6 +9,8 @@ import (
 	"os"
 )
 
+//go:generate go run cuelang.org/go/cmd/cue cmd genimagebases
+
 const (
 	EnvRootUser     = "PLAYWITHGODEV_ROOT_USER"
 	EnvRootPassword = "PLAYWITHGODEV_ROOT_PASSWORD"
@@ -16,15 +18,11 @@ const (
 	EnvContributorUser     = "PLAYWITHGODEV_CONTRIBUTOR_USER"
 	EnvContributorPassword = "PLAYWITHGODEV_CONTRIBUTOR_PASSWORD"
 
-	GiteaOrg  = "x"
-	GitHubOrg = "userguides"
-
 	TemporaryUserFullName = "A really very temporary user"
 )
 
 type runner struct {
 	*rootCmd
-	preCmd            *preCmd
 	serveCmd          *serveCmd
 	newContributorCmd *newContributorCmd
 	reapCmd           *reapCmd
@@ -47,8 +45,6 @@ func (r *runner) mainerr() (err error) {
 	}
 	cmd := args[0]
 	switch cmd {
-	case "pre":
-		return r.preCmd.run(args[1:])
 	case "serve":
 		return r.serveCmd.run(args[1:])
 	case "reap":

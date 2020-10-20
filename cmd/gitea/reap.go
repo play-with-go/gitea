@@ -29,34 +29,9 @@ func (rc *reapCmd) run(args []string) error {
 	check(err, "failed to create root client: %v", err)
 	rc.client.SetBasicAuth(os.Getenv(EnvRootUser), os.Getenv(EnvRootPassword))
 
-	rc.removeOldRepos()
 	rc.removeOldUsers()
 
 	return nil
-}
-
-func (rc *reapCmd) removeOldRepos() {
-	opt := gitea.ListReposOptions{
-		ListOptions: gitea.ListOptions{
-			PageSize: 10,
-		},
-	}
-	for {
-		repos, _, err := rc.client.ListUserRepos(GiteaOrg, opt)
-		check(err, "failed to list repos via %v: %v", *rc.fRootURL, err)
-		for _, repo := range repos {
-			if delta := rc.now.Sub(repo.Created); delta > rc.age {
-				_, err := rc.client.DeleteRepo(GiteaOrg, repo.Name)
-				check(err, "failed to delete repo %v/%v: %v", GiteaOrg, repo.Name, err)
-				fmt.Fprintf(os.Stderr, "deleted repo %v/%v (was %v old)\n", GiteaOrg, repo.Name, delta)
-			}
-		}
-		if len(repos) < opt.PageSize {
-			break
-		}
-		opt.Page++
-	}
-
 }
 
 func (rc *reapCmd) removeOldUsers() {
@@ -76,11 +51,39 @@ func (rc *reapCmd) removeOldUsers() {
 			if delta < rc.age {
 				continue
 			}
+			// Remove all the user's repos first
+			rc.removeOldRepos(user)
+
 			_, err := rc.client.AdminDeleteUser(user.UserName)
 			check(err, "failed to delete user %v: %v", user.UserName, err)
 			fmt.Fprintf(os.Stderr, "deleted user %v (was %v old)\n", user.UserName, delta)
 		}
 		if len(users) < opt.PageSize {
+			break
+		}
+		opt.Page++
+	}
+}
+
+func (rc *reapCmd) removeOldRepos(user *gitea.User) {
+	opt := gitea.ListReposOptions{
+		ListOptions: gitea.ListOptions{
+			PageSize: 10,
+		},
+	}
+	for {
+		repos, _, err := rc.client.ListUserRepos(user.UserName, opt)
+		check(err, "failed to list repos via %v: %v", *rc.fRootURL, err)
+		for _, repo := range repos {
+			delta := rc.now.Sub(repo.Created)
+			if delta < rc.age {
+				continue
+			}
+			_, err := rc.client.DeleteRepo(user.UserName, repo.Name)
+			check(err, "failed to delete repo %v/%v: %v", user.UserName, repo.Name, err)
+			fmt.Fprintf(os.Stderr, "deleted repo %v/%v (was %v old)\n", user.UserName, repo.Name, delta)
+		}
+		if len(repos) < opt.PageSize {
 			break
 		}
 		opt.Page++

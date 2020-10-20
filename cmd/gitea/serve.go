@@ -128,9 +128,6 @@ func (sc *serveCmd) newUser(args *gitea.NewUser) preguide.PrestepOut {
 	// Create gitea repositories in userguides
 	repos := sc.createUserRepos(user, args.Repos)
 
-	// Add user as a collab on that repo
-	sc.addUserCollabRepos(repos, user)
-
 	res := preguide.PrestepOut{
 		Vars: []string{
 			"GITEA_USERNAME=" + user.UserName,
@@ -220,7 +217,7 @@ repos:
 				Name:    name,
 				Private: false,
 			}
-			repo, _, err = sc.client.AdminCreateRepo(GiteaOrg, args)
+			repo, _, err = sc.client.AdminCreateRepo(user.UserName, args)
 			if err == nil {
 				res = append(res, userRepo{
 					repoSpec:   repoSpec,
@@ -237,12 +234,4 @@ repos:
 type userRepo struct {
 	repoSpec gitea.Repo
 	*giteasdk.Repository
-}
-
-func (sc *serveCmd) addUserCollabRepos(repos []userRepo, user *userPassword) {
-	for _, repo := range repos {
-		args := giteasdk.AddCollaboratorOption{}
-		_, err := sc.client.AddCollaborator(GiteaOrg, repo.Name, user.UserName, args)
-		check(err, "failed to add user as collaborator: %v", err)
-	}
 }
