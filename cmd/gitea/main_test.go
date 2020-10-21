@@ -199,7 +199,7 @@ func waitErr() (err error) {
 
 func prestepErr() (err error) {
 	defer handleKnown(&err)
-	args := strings.NewReader(`{"Repos": [{"Var": "REPO1", "Pattern": "user*"}]}`)
+	args := strings.NewReader(`{"Repos": [{"Var": "REPO1", "Pattern": "user"},{"Var": "REPO2", "Pattern": "user*"}]}`)
 	newuserURL := "http://cmd_gitea:8080/newuser"
 	resp, err := http.Post(newuserURL, "application/json", args)
 	check(err, "failed to post to %v: %v", newuserURL, err)
@@ -229,6 +229,13 @@ func prestepErr() (err error) {
 	}
 	if fail {
 		raise("not all environment variables found")
+	}
+	// Verify that the patterns for both repo were respected
+	if *found["REPO1"] != "user" {
+		raise("expected REPO1 to be %v; got %v", "user", *found["REPO1"])
+	}
+	if *found["REPO2"] == "user" || !strings.HasPrefix(*found["REPO2"], "user") {
+		raise("expected REPO2 to have prefix %v; got %v", "user", *found["REPO2"])
 	}
 	// Test out the user credentials
 	client, err := gitea.NewClient("http://gitea:3000")
