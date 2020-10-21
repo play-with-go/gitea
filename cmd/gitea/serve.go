@@ -206,13 +206,18 @@ repos:
 		var err error
 		var repo *giteasdk.Repository
 		var prefix, suffix string
+		var hasRandomPart bool
 		if i := strings.LastIndex(repoSpec.Pattern, "*"); i != -1 {
+			hasRandomPart = true
 			prefix, suffix = repoSpec.Pattern[:i], repoSpec.Pattern[i+1:]
 		} else {
 			prefix = repoSpec.Pattern
 		}
 		for j := 0; j < 3; j++ {
-			name := prefix + sc.genID() + suffix
+			name := prefix
+			if hasRandomPart {
+				name += sc.genID() + suffix
+			}
 			args := giteasdk.CreateRepoOption{
 				Name:    name,
 				Private: false,
@@ -224,6 +229,9 @@ repos:
 					Repository: repo,
 				})
 				continue repos
+			}
+			if !hasRandomPart {
+				break
 			}
 		}
 		raise("failed to create user repostitory: %v", err)
