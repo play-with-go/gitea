@@ -12,7 +12,9 @@ services:
   gitea:
     image: gitea/gitea:1.12.5
     networks:
-      - gitea
+      gitea:
+        aliases:
+          - random.com
     environment:
       - USER_UID=1000
       - USER_GID=1000
