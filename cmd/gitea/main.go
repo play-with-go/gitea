@@ -6,6 +6,7 @@
 package main
 
 import (
+	"net/url"
 	"os"
 )
 
@@ -38,6 +39,10 @@ func (r *runner) mainerr() (err error) {
 	if err := r.rootCmd.fs.Parse(os.Args[1:]); err != nil {
 		return usageErr{err, r.rootCmd}
 	}
+
+	u, err := url.Parse(*r.fRootURL)
+	check(err, "failed to parse -rootURL value %q: %v", *r.fRootURL, err)
+	r.rootCmd.hostname = u.Hostname()
 
 	args := r.rootCmd.fs.Args()
 	if len(args) == 0 {

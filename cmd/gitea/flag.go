@@ -59,6 +59,9 @@ type rootCmd struct {
 	flagDefaults string
 	fDebug       *bool
 	fRootURL     *string
+
+	// hostname is the parse host from -rootURL
+	hostname string
 }
 
 func newFlagSet(name string, setupFlags func(*flag.FlagSet)) string {

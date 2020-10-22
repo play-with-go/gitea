@@ -27,6 +27,9 @@ import (
 )
 
 func (sc *serveCmd) run(args []string) error {
+	if len(args) > 0 {
+		raise("serve does not take any flags or arguments")
+	}
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals)
 
@@ -135,7 +138,7 @@ func (sc *serveCmd) newUser(args *gitea.NewUser) preguide.PrestepOut {
 		},
 	}
 	for _, repo := range repos {
-		res.Vars = append(res.Vars, fmt.Sprintf("%v=%v", repo.repoSpec.Var, repo.Name))
+		res.Vars = append(res.Vars, fmt.Sprintf("%v=%v/%v/%v", repo.repoSpec.Var, sc.hostname, user.UserName, repo.Name))
 	}
 	return res
 }
@@ -174,7 +177,7 @@ func (sc *serveCmd) createUser() *userPassword {
 		args := giteasdk.CreateUserOption{
 			FullName:           TemporaryUserFullName,
 			Username:           username,
-			Email:              username + "@gopher.live",
+			Email:              fmt.Sprintf("%v@%v", username, sc.hostname),
 			Password:           password,
 			MustChangePassword: &no,
 		}

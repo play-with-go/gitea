@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 	"testing"
@@ -231,17 +232,18 @@ func prestepErr() (err error) {
 		raise("not all environment variables found")
 	}
 	// Verify that the patterns for both repo were respected
-	if *found["REPO1"] != "user" {
-		raise("expected REPO1 to be %v; got %v", "user", *found["REPO1"])
+	repo1 := fmt.Sprintf("random.com/%v/user", *found["GITEA_USERNAME"])
+	if *found["REPO1"] != repo1 {
+		raise("expected REPO1 to be %q; got %q", repo1, *found["REPO1"])
 	}
-	if *found["REPO2"] == "user" || !strings.HasPrefix(*found["REPO2"], "user") {
-		raise("expected REPO2 to have prefix %v; got %v", "user", *found["REPO2"])
+	if *found["REPO2"] == repo1 || !strings.HasPrefix(*found["REPO2"], repo1) {
+		raise("expected REPO2 to have prefix %q; got %q", repo1, *found["REPO2"])
 	}
 	// Test out the user credentials
-	client, err := gitea.NewClient("http://gitea:3000")
+	client, err := gitea.NewClient("http://random.com:3000")
 	check(err, "failed to create gitea client: %v", err)
 	client.SetBasicAuth(*found["GITEA_USERNAME"], *found["GITEA_PASSWORD"])
-	_, _, err = client.GetRepo(*found["GITEA_USERNAME"], *found["REPO1"])
+	_, _, err = client.GetRepo(*found["GITEA_USERNAME"], path.Base(*found["REPO1"]))
 	check(err, "failed to get repo details for %v: %v", *found["REPO1"], err)
 	return nil
 }
@@ -280,7 +282,7 @@ func (tr *testRunner) wrapEnv(cmd *exec.Cmd) *exec.Cmd {
 	}
 	cmd.Env = append(cmd.Env,
 		"COMPOSE_PROJECT_NAME="+tr.envComposeProjectName,
-		"GITEA_ROOT_URL=http://gitea:3000",
+		"GITEA_ROOT_URL=http://random.com:3000",
 	)
 	return cmd
 }
