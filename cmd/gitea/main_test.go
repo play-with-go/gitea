@@ -200,7 +200,7 @@ func waitErr() (err error) {
 
 func prestepErr() (err error) {
 	defer handleKnown(&err)
-	args := strings.NewReader(`{"Repos": [{"Var": "REPO1", "Pattern": "user"},{"Var": "REPO2", "Pattern": "user*"}]}`)
+	args := strings.NewReader(`{"Repos": [{"Var": "REPO1", "Pattern": "user"},{"Var": "REPO2", "Pattern": "user*", "Private": true}]}`)
 	newuserURL := "http://cmd_gitea:8080/newuser"
 	resp, err := http.Post(newuserURL, "application/json", args)
 	check(err, "failed to post to %v: %v", newuserURL, err)
@@ -245,6 +245,12 @@ func prestepErr() (err error) {
 	client.SetBasicAuth(*found["GITEA_USERNAME"], *found["GITEA_PASSWORD"])
 	_, _, err = client.GetRepo(*found["GITEA_USERNAME"], path.Base(*found["REPO1"]))
 	check(err, "failed to get repo details for %v: %v", *found["REPO1"], err)
+
+	repo2, _, err := client.GetRepo(*found["GITEA_USERNAME"], path.Base(*found["REPO2"]))
+	check(err, "failed to get repo details for %v: %v", *found["REPO2"], err)
+	if !repo2.Private {
+		raise("expected REPO2 to be private; it was not")
+	}
 	return nil
 }
 
