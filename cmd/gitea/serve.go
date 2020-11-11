@@ -223,7 +223,7 @@ repos:
 			}
 			args := giteasdk.CreateRepoOption{
 				Name:    name,
-				Private: false,
+				Private: repoSpec.Private,
 			}
 			repo, _, err = sc.client.AdminCreateRepo(user.UserName, args)
 			if err == nil {
