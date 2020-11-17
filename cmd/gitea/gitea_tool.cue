@@ -4,8 +4,8 @@ import (
 	"tool/file"
 )
 
-// busybox:1.32.0-glibc
-imageBase: "busybox@sha256:30d1412c0f45be67d38b99179866868b1f09fd9013cbacf22813926aee428cf7"
+// buildpack-deps:buster-scm - because for now we need ssh-keyscan
+imageBase: "buildpack-deps@sha256:f010c9887ecea10d052247ef8befb79c2d17ea3f92ab6cb05039caab757fb14e"
 
 command: genimagebases: {
 	writeGoFile: file.Create & {
@@ -36,7 +36,6 @@ command: genimagebases: {
 
 		RUN --mount=type=cache,target=/root/.cache/go go build -o cmd/gitea/gitea ./cmd/gitea
 
-		# busybox:1.32.0-glibc
 		FROM \(imageBase)
 
 		RUN mkdir /runbin

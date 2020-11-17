@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"runtime"
 	"strings"
 	"testing"
@@ -239,18 +238,7 @@ func prestepErr() (err error) {
 	if *found["REPO2"] == repo1 || !strings.HasPrefix(*found["REPO2"], repo1) {
 		raise("expected REPO2 to have prefix %q; got %q", repo1, *found["REPO2"])
 	}
-	// Test out the user credentials
-	client, err := gitea.NewClient("http://random.com:3000")
-	check(err, "failed to create gitea client: %v", err)
-	client.SetBasicAuth(*found["GITEA_USERNAME"], *found["GITEA_PASSWORD"])
-	_, _, err = client.GetRepo(*found["GITEA_USERNAME"], path.Base(*found["REPO1"]))
-	check(err, "failed to get repo details for %v: %v", *found["REPO1"], err)
-
-	repo2, _, err := client.GetRepo(*found["GITEA_USERNAME"], path.Base(*found["REPO2"]))
-	check(err, "failed to get repo details for %v: %v", *found["REPO2"], err)
-	if !repo2.Private {
-		raise("expected REPO2 to be private; it was not")
-	}
+	// TODO: reinstate some sort of test here: github.com/play-with-go/gitea/issues/69
 	return nil
 }
 
