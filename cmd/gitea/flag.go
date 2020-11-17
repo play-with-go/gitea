@@ -124,6 +124,8 @@ type serveCmd struct {
 	fPort        *string
 
 	client *gitea.Client
+
+	keyScan string
 }
 
 func newServeCmd(r *runner) *serveCmd {

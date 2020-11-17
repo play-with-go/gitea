@@ -7,13 +7,18 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	mathrand "math/rand"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime/debug"
 	"strings"
@@ -23,6 +28,7 @@ import (
 	giteasdk "code.gitea.io/sdk/gitea"
 	"github.com/play-with-go/gitea"
 	"github.com/play-with-go/preguide"
+	"golang.org/x/crypto/ssh"
 	"gopkg.in/retry.v1"
 )
 
@@ -60,6 +66,12 @@ func (sc *serveCmd) run(args []string) error {
 		close(clientCreate)
 	}()
 
+	keyScanComplete := make(chan int)
+	go func() {
+		sc.runKeyScan()
+		close(keyScanComplete)
+	}()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(resp http.ResponseWriter, req *http.Request) {
 		if req.URL.Query().Get("get-version") != "1" || req.Method != "GET" {
@@ -70,6 +82,7 @@ func (sc *serveCmd) run(args []string) error {
 	})
 	mux.HandleFunc("/newuser", func(resp http.ResponseWriter, req *http.Request) {
 		<-clientCreate
+		<-keyScanComplete
 		// Requires contriburo credentials
 		if req.Method != "POST" {
 			resp.WriteHeader(http.StatusBadRequest)
@@ -128,13 +141,20 @@ func (sc *serveCmd) newUser(args *gitea.NewUser) preguide.PrestepOut {
 	// User account -> username (gitea)
 	user := sc.createUser()
 
+	priv, pub := sc.createUserSSHKey()
+
+	// ssh-key (upload to gitea)
+	sc.setUserSSHKey(user, pub)
+
 	// Create gitea repositories in userguides
 	repos := sc.createUserRepos(user, args.Repos)
 
 	res := preguide.PrestepOut{
 		Vars: []string{
 			"GITEA_USERNAME=" + user.UserName,
-			"GITEA_PASSWORD=" + user.password,
+			"GITEA_PRIV_KEY=" + priv,
+			"GITEA_PUB_KEY=" + pub,
+			"GITEA_KEYSCAN=" + sc.keyScan,
 		},
 	}
 	for _, repo := range repos {
@@ -245,4 +265,107 @@ repos:
 type userRepo struct {
 	repoSpec gitea.Repo
 	*giteasdk.Repository
+}
+
+func (sc *serveCmd) createUserSSHKey() (string, string) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	check(err, "failed to generate ed25519 key: %v", err)
+	privKey := pem.EncodeToMemory(&pem.Block{Type: "OPENSSH PRIVATE KEY", Bytes: marshalED25519PrivateKey(priv, pub)})
+	check(err, "failed to pem-encode private key: %v", err)
+	pubKey, err := ssh.NewPublicKey(pub)
+	check(err, "failed to create public key: %v", err)
+	authKey := ssh.MarshalAuthorizedKey(pubKey)
+	return string(privKey), string(authKey)
+}
+
+func (sc *serveCmd) setUserSSHKey(user *userPassword, pub string) {
+	args := giteasdk.CreateKeyOption{
+		Title:    "ssh key",
+		Key:      pub,
+		ReadOnly: false,
+	}
+	_, _, err := sc.client.AdminCreateUserPublicKey(user.UserName, args)
+	check(err, "failed to set user SSH key: %v", err)
+}
+
+func (sc *serveCmd) runKeyScan() {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("ssh-keyscan", "-H", "gopher.live")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	check(err, "failed to run [%v]: %v\n%s", strings.Join(cmd.Args, " "), err, stderr.Bytes())
+	sc.keyScan = strings.TrimSpace(stdout.String())
+}
+
+// marshalED25519PrivateKey is based on https://github.com/mikesmitty/edkey
+func marshalED25519PrivateKey(priv ed25519.PrivateKey, pub ed25519.PublicKey) []byte {
+	magic := append([]byte("openssh-key-v1"), 0)
+
+	var w struct {
+		CipherName   string
+		KdfName      string
+		KdfOpts      string
+		NumKeys      uint32
+		PubKey       []byte
+		PrivKeyBlock []byte
+	}
+
+	// Fill out the private key fields
+	var pk1 struct {
+		Check1  uint32
+		Check2  uint32
+		Keytype string
+		Pub     []byte
+		Priv    []byte
+		Comment string
+		Pad     []byte `ssh:"rest"`
+	}
+
+	// Set our check ints
+	ci := mathrand.Uint32()
+	pk1.Check1 = ci
+	pk1.Check2 = ci
+
+	// Set our key type
+	pk1.Keytype = ssh.KeyAlgoED25519
+
+	// Add the pubkey to the optionally-encrypted block
+	pubKey := []byte(pub)
+	pk1.Pub = pubKey
+
+	// Add our private key
+	pk1.Priv = []byte(priv)
+
+	// Might be useful to put something in here at some point
+	pk1.Comment = ""
+
+	// Add some padding to match the encryption block size within PrivKeyBlock (without Pad field)
+	// 8 doesn't match the documentation, but that's what ssh-keygen uses for unencrypted keys. *shrug*
+	bs := 8
+	blockLen := len(ssh.Marshal(pk1))
+	padLen := (bs - (blockLen % bs)) % bs
+	pk1.Pad = make([]byte, padLen)
+
+	// Padding is a sequence of bytes like: 1, 2, 3...
+	for i := 0; i < padLen; i++ {
+		pk1.Pad[i] = byte(i + 1)
+	}
+
+	// Generate the pubkey prefix "\0\0\0\nssh-ed25519\0\0\0 "
+	prefix := []byte{0x0, 0x0, 0x0, 0x0b}
+	prefix = append(prefix, []byte(ssh.KeyAlgoED25519)...)
+	prefix = append(prefix, []byte{0x0, 0x0, 0x0, 0x20}...)
+
+	// Only going to support unencrypted keys for now
+	w.CipherName = "none"
+	w.KdfName = "none"
+	w.KdfOpts = ""
+	w.NumKeys = 1
+	w.PubKey = append(prefix, pubKey...)
+	w.PrivKeyBlock = ssh.Marshal(pk1)
+
+	magic = append(magic, ssh.Marshal(w)...)
+
+	return magic
 }
