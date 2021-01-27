@@ -7,6 +7,9 @@ workflows: [
 	{file: "test.yml", schema: test},
 ]
 
+_#latestGo:     "1.15.7"
+_#ubuntuLatest: "ubuntu-18.04"
+
 test: json.#Workflow & {
 	name: "Test"
 	env: {
@@ -21,8 +24,8 @@ test: json.#Workflow & {
 		strategy: {
 			"fail-fast": false
 			matrix: {
-				os: ["ubuntu-latest"]
-				go_version: ["1.15.4"]
+				os: [_#ubuntuLatest]
+				go_version: [_#latestGo]
 			}
 		}
 		"runs-on": "${{ matrix.os }}"
