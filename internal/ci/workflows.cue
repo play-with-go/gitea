@@ -7,7 +7,7 @@ workflows: [
 	{file: "test.yml", schema: test},
 ]
 
-_#latestGo:     "1.16"
+_#latestGo:     "1.16.3"
 _#ubuntuLatest: "ubuntu-18.04"
 
 test: json.#Workflow & {
