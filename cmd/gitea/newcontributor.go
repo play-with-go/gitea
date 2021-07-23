@@ -51,9 +51,10 @@ func (ncc *newContributorCmd) run(args []string) error {
 
 	// Set further user options
 	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
-		Admin:    &yes,
-		Email:    user.Email,
-		FullName: user.FullName,
+		Admin:     &yes,
+		Email:     &user.Email,
+		FullName:  &user.FullName,
+		LoginName: user.UserName,
 	})
 	check(err, "failed to edit contributor %v: %v", user.UserName, err)
 

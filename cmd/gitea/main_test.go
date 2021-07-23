@@ -124,7 +124,7 @@ func TestEverything(t *testing.T) {
 
 	tr.mustRunDockerCompose("exec", "-T", "-u", "git", "gitea", "gitea", "migrate")
 
-	tr.mustRunDockerCompose("exec", "-T", "-u", "git", "gitea", "gitea", "admin", "create-user", "--admin",
+	tr.mustRunDockerCompose("exec", "-T", "-u", "git", "gitea", "gitea", "admin", "user", "create", "--admin",
 		"--username", os.Getenv("PLAYWITHGODEV_ROOT_USER"),
 		"--password", os.Getenv("PLAYWITHGODEV_ROOT_PASSWORD"),
 		"--email", "blah@blah.com",
