@@ -4,21 +4,21 @@ import "github.com/play-with-go/preguide"
 
 #GuideOutput: {
 	Delims: [string, string]
+	FilenameComment: bool
 	Presteps: [...#Prestep]
 	Terminals: [...preguide.#Terminal]
 	Scenarios: [...preguide.#Scenario]
-	Langs: [preguide.#Language]: #LangSteps
-	Defs: [string]:              _
+	Hash: string
+	Steps: [string]: #Step
 	Networks: [...string]
 	Env: [...string]
 }
 
-_#stepCommon: {
+_stepCommon: {
 	StepType: #StepType
 	Name:     string
 	Order:    int
 	Terminal: string
-	...
 }
 
 // TODO: keep this in sync with the Go definitions
@@ -38,27 +38,26 @@ _#stepCommon: {
 	Variables: [...string]
 }
 
-#LangSteps: {
-	Hash: string
-	Steps: [string]: #Step
-}
-
-#Step: (#CommandStep | #UploadStep) & _#stepCommon
+#Step: (#CommandStep | #UploadStep) & _stepCommon
 
 #CommandStep: {
-	_#stepCommon
+	_stepCommon
+	DoNotTrim:       bool
+	RandomReplace:   string
+	InformationOnly: bool
 	Stmts: [...#Stmt]
 }
 
 #Stmt: {
-	Negated:  bool
-	CmdStr:   string
-	ExitCode: int
-	Output:   string
+	Negated:          bool
+	CmdStr:           string
+	ExitCode:         int
+	Output:           string
+	ComparisonOutput: string
 }
 
 #UploadStep: {
-	_#stepCommon
+	_stepCommon
 	Renderer: preguide.#Renderer
 	Language: string
 	Source:   string

@@ -8,8 +8,8 @@
 # The code generated warning and comment regarding the syntax reference are not at the top of the file
 # because the syntax line must be the first in the file.
 
-# golang:1.15.7
-FROM golang@sha256:c161abf0cde3969e05f6914a86cab804b2b0df515f4ff9570475b25547ba7959 AS stage1
+# golang:1.16.7
+FROM golang@sha256:4544ae57fc735d7e415603d194d9fb09589b8ad7acd4d66e928eabfb1ed85ff1 AS stage1
 
 ENV GOCACHE=/root/.cache/go/gocache
 ENV GOMODCACHE=/root/.cache/go/gomodcache

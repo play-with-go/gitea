@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:experimental@sha256:de85b2f3a3e8a2f7fe48e8e84a65f6fdd5cd5183afa6412fff9caa6871649c44
 
-# golang:1.15.2
-FROM golang@sha256:da7ff43658854148b401f24075c0aa390e3b52187ab67cab0043f2b15e754a68 AS stage1
+# golang:1.16.6
+FROM golang@sha256:4544ae57fc735d7e415603d194d9fb09589b8ad7acd4d66e928eabfb1ed85ff1 AS stage1
 
 ENV GOCACHE=/root/.cache/go/gocache
 ENV GOMODCACHE=/root/.cache/go/gomodcache

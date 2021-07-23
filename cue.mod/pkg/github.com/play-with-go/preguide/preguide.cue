@@ -1,7 +1,6 @@
 package preguide
 
 import (
-	"list"
 	"path"
 	"regexp"
 )
@@ -16,58 +15,10 @@ import (
 
 #Guide: {
 
-	#Step: (#Command | #CommandFile | #Upload | #UploadFile ) & {
-		Name:     string
-		StepType: #StepType
-		Terminal: string
-	}
+	Languages: [...#Language]
+	Languages: ["en"]
 
-	// Change this to a hidden definition once cuelang.org/issue/533 is resolved
-	#stepCommon: {
-		Name:     string
-		StepType: #StepType
-		Terminal: string
-	}
-
-	#uploadCommon: {
-		Target: string
-
-		// The language of the content being uploaded, e.g. go
-		// This gets used on the markdown code block, hence the
-		// values supported here are a function of the markdown
-		// parse on the other end.
-		Language: *regexp.FindSubmatch("^.(.*)", path.Ext(Target))[1] | string
-
-		// Renderer defines how the upload file contents will be
-		// rendered to the user in the guide.
-		Renderer: #Renderer
-	}
-
-	#Command: {
-		#stepCommon
-		StepType: #StepTypeCommand
-		Source:   string
-	}
-
-	#CommandFile: {
-		#stepCommon
-		StepType: #StepTypeCommandFile
-		Path:     string
-	}
-
-	#Upload: {
-		#stepCommon
-		#uploadCommon
-		StepType: #StepTypeUpload
-		Source:   string
-	}
-
-	#UploadFile: {
-		#stepCommon
-		#uploadCommon
-		StepType: #StepTypeUploadFile
-		Path:     string
-	}
+	FilenameComment: *false | bool
 
 	// Networks is the list of docker networks to connect to when running
 	// this guide.
@@ -84,38 +35,29 @@ import (
 	// of the environment variable ABC therefore looks like "{{ .ABC }}"
 	Delims: *["{{", "}}"] | [string, string]
 
-	Steps: [string]: [#Language]: #Step
-
-	Steps: [name=string]: [#Language]: {
-		// TODO: remove post upgrade to latest CUE? Because at that point
-		// the defaulting in #TerminalName will work
-		Terminal: *#TerminalNames[0] | string
-
-		Name: name
+	Steps: [name=string]: #Step & {
+		Name:     name
+		Terminal: _#TerminalName
 	}
 
 	// Scenarios define the various images under which this guide will be
 	// run
-	Scenarios: [string]: #Scenario
-	Scenarios: [name=string]: {
+	_#ScenarioName: =~"^[a-zA-Z0-9]+$"
+	Scenarios: [name=_#ScenarioName]: #Scenario & {
 		Name: name
 	}
 
-	_#ScenarioName: or([ for name, _ in Scenarios {name}])
-
+	// This "forces" the user to define the image for every scenario for
+	// every terminal they declare
 	for scenario, _ in Scenarios for terminal, _ in Terminals {
 		Terminals: "\(terminal)": Scenarios: "\(scenario)": #TerminalScenario
 	}
 
-	// TODO: remove post upgrade to latest CUE? Because at that point
-	// the use of or() will work, which will give a better error message
-	#TerminalNames: [ for k, _ in Terminals {k}]
-	#ok: true & and([ for s in Steps for l in s {list.Contains(#TerminalNames, l.Terminal)}])
+	_#TerminalNames: [ for k, _ in Terminals {k}]
+	_#TerminalName: *_#TerminalNames[0] | or(_#TerminalNames)
 
 	// Terminals defines the required remote VMs for a given guide
-	Terminals: [string]: #Terminal
-
-	Terminals: [name=string]: {
+	Terminals: [name=string]: #Terminal & {
 		Name: name
 	}
 
@@ -159,11 +101,74 @@ import (
 // in #Guide, because those definitions rely on references to Terminals
 // which only makes sense in the context of a #Guide instance
 
-#Step:        #Guide.#Step
-#Command:     #Guide.#Command
-#CommandFile: #Guide.#CommandFile
-#Upload:      #Guide.#Upload
-#UploadFile:  #Guide.#UploadFile
+_stepCommon: {
+	Name:     string
+	StepType: #StepType
+	Terminal: string
+}
+
+_#commandCommon: {
+	_stepCommon
+
+	// RandomReplace indicates the entire output from this command block
+	// should be used to sanitise the output from the entire script,
+	// replacing the "random" output from this command block with the
+	// value specified in RandomReplace.
+	RandomReplace?: string
+
+	// DoNotTrim indicates that when RandomReplace is set, its value
+	// should not be trimmed (the default is to trim the trailing \n
+	// from the output) prior to sanitising the output from the script
+	DoNotTrim: *false | bool
+
+	// InformationOnly indicates that this field is not required for the
+	// successful execution of the script. Generally this is used by
+	// command blocks which are outputting random data for post-execution
+	// sanitisation, e.g. git commits.
+	InformationOnly: *false | bool
+}
+
+_#uploadCommon: {
+	_stepCommon
+
+	Target: string
+
+	// The language of the content being uploaded, e.g. go
+	// This gets used on the markdown code block, hence the
+	// values supported here are a function of the markdown
+	// parse on the other end.
+	Language: *regexp.FindSubmatch("^.(.*)", path.Ext(Target))[1] | string
+
+	// Renderer defines how the upload file contents will be
+	// rendered to the user in the guide.
+	Renderer: #Renderer
+}
+
+#Step: (#Command | #CommandFile | #Upload | #UploadFile) & _stepCommon
+
+#Command: {
+	_#commandCommon
+	StepType: #StepTypeCommand
+	Source:   string
+}
+
+#CommandFile: {
+	_#commandCommon
+	StepType: #StepTypeCommandFile
+	Path:     string
+}
+
+#Upload: {
+	_#uploadCommon
+	StepType: #StepTypeUpload
+	Source:   string
+}
+
+#UploadFile: {
+	_#uploadCommon
+	StepType: #StepTypeUploadFile
+	Path:     string
+}
 
 // #PrestepServiceConfig is a mapping from prestep package path to endpoint
 // configuration.
@@ -184,12 +189,13 @@ import (
 
 // Renderers define what part (or whole) of an upload file should be shown (rendered)
 // to the user in the guide.
-#Renderer: (*#RenderFull | #RenderLineRanges) & _#rendererCommon
+#Renderer: (*#RenderFull | #RenderLineRanges | #RenderDiff) & _#rendererCommon
 
 #RendererType: int
 
 #RendererTypeFull:       #RendererType & 1
 #RendererTypeLineRanges: #RendererType & 2
+#RendererTypeDiff:       #RendererType & 3
 
 _#rendererCommon: {
 	RendererType: #RendererType
@@ -208,13 +214,8 @@ _#rendererCommon: {
 	Lines: [...[int, int]]
 }
 
-// Post upgrade to latest CUE we have a number of things to change/test, with /
-// reference to https://gist.github.com/myitcv/399ed50f792b49ae7224ee5cb3e504fa#file-304b02e-cue
-//
-// 1. Move to the use of #TerminalName (probably hidden) as a type for a terminal's
-// name in #stepCommon
-// 2. Try and move to the advanced definition of Steps: [string]: [lang] to be the
-// disjunction of #Step or [scenario]: #Step
-// 3. Ensure that a step's name can be defaulted for this advanced definition (i.e.
-// that if a step is specified at the language level its name defaults, but also
-// if it is specified at the scenario level)
+#RenderDiff: {
+	_#rendererCommon
+	RendererType: #RendererTypeDiff
+	Pre:          string
+}
