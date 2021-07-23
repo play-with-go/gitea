@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	code.gitea.io/sdk/gitea v0.13.1
-	cuelang.org/go v0.3.2
+	cuelang.org/go v0.4.0
 	github.com/kr/pretty v0.2.0
 	github.com/myitcv/docker-compose v0.0.0-20200623052903-c60483a3250f
 	github.com/play-with-go/preguide v0.0.2-0.20200929132054-e0f48a7f7b23
