@@ -3,7 +3,7 @@ module github.com/play-with-go/gitea
 go 1.16
 
 require (
-	code.gitea.io/sdk/gitea v0.13.1
+	code.gitea.io/sdk/gitea v0.14.1
 	cuelang.org/go v0.4.0
 	github.com/kr/pretty v0.2.0
 	github.com/myitcv/docker-compose v0.0.0-20200623052903-c60483a3250f

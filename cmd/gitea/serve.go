@@ -206,8 +206,9 @@ func (sc *serveCmd) createUser() *userPassword {
 			continue
 		}
 		_, err = sc.client.AdminEditUser(user.UserName, giteasdk.EditUserOption{
-			Email:                   user.Email,
-			FullName:                user.FullName,
+			LoginName:               user.UserName,
+			Email:                   &user.Email,
+			FullName:                &user.FullName,
 			MaxRepoCreation:         &zero,
 			AllowCreateOrganization: &no,
 			AllowGitHook:            &no,
