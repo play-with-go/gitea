@@ -11,3 +11,4 @@ $export COMPOSE_PROJECT_NAME gitea
 $export PATH "$modRoot/.bin:$PATH"
 $export COMPOSE_DOCKER_CLI_BUILD 1
 $export DOCKER_BUILDKIT 1
+$export CGO_ENABLED=0

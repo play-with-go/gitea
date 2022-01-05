@@ -197,6 +197,7 @@ func (sc *serveCmd) createUser() *userPassword {
 		args := giteasdk.CreateUserOption{
 			FullName:           TemporaryUserFullName,
 			Username:           username,
+			LoginName:          username,
 			Email:              fmt.Sprintf("%v@%v", username, sc.hostname),
 			Password:           password,
 			MustChangePassword: &no,
@@ -206,8 +207,9 @@ func (sc *serveCmd) createUser() *userPassword {
 			continue
 		}
 		_, err = sc.client.AdminEditUser(user.UserName, giteasdk.EditUserOption{
-			Email:                   user.Email,
-			FullName:                user.FullName,
+			Email:                   &user.Email,
+			FullName:                &user.FullName,
+			LoginName:               user.UserName,
 			MaxRepoCreation:         &zero,
 			AllowCreateOrganization: &no,
 			AllowGitHook:            &no,

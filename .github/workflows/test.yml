@@ -4,43 +4,45 @@ name: Test
 env:
   PLAYWITHGODEV_ROOT_USER: root
   PLAYWITHGODEV_ROOT_PASSWORD: asdffdsa
-on:
+"on":
   push:
     branches:
-    - main
+      - main
   pull_request:
     branches:
-    - '**'
+      - '**'
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
         os:
-        - ubuntu-18.04
+          - ubuntu-22.04
         go_version:
-        - 1.16.3
+          - 1.19.1
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go_version }}
-    - name: Env setup
-      run: ./_scripts/env.sh github
-    - name: Verify
-      run: go mod verify
-    - name: docker-compose build
-      run: docker-compose build
-    - name: Generate
-      run: go generate ./...
-    - name: Test
-      run: CGO_ENABLED=0 go test ./...
-    - name: staticcheck
-      run: go run honnef.co/go/tools/cmd/staticcheck ./...
-    - name: Tidy
-      run: go mod tidy
-    - name: Verify commit is clean
-      run: test -z "$(git status --porcelain)" || (git status; git diff; false)
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go_version }}
+      - name: Env setup
+        run: ./_scripts/env.sh github
+      - name: Verify
+        run: go mod verify
+      - name: docker-compose build
+        run: docker-compose build
+      - name: Generate
+        run: go generate ./...
+      - name: Test
+        run: go test ./...
+        env:
+          CGO_ENABLED: "0"
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck ./...
+      - name: Tidy
+        run: go mod tidy
+      - name: Verify commit is clean
+        run: test -z "$(git status --porcelain)" || (git status; git diff; false)

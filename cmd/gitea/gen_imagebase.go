@@ -2,4 +2,4 @@
 
 package main
 
-const imageBase = "buildpack-deps@sha256:f010c9887ecea10d052247ef8befb79c2d17ea3f92ab6cb05039caab757fb14e"
+const imageBase = "buildpack-deps@sha256:ae1f98a016484d09849a53b809f1a55e177f6c3cb7f6c78d4bd760d44e7dab69"
