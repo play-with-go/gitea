@@ -1,7 +1,5 @@
-# syntax = docker/dockerfile:experimental@sha256:de85b2f3a3e8a2f7fe48e8e84a65f6fdd5cd5183afa6412fff9caa6871649c44
-
-# golang:1.16.6
-FROM golang@sha256:4544ae57fc735d7e415603d194d9fb09589b8ad7acd4d66e928eabfb1ed85ff1 AS stage1
+# golang:1.19.1
+FROM golang@sha256:2d17ffd12a2cdb25d4a633ad25f8dc29608ed84f31b3b983427d825280427095 AS stage1
 
 ENV GOCACHE=/root/.cache/go/gocache
 ENV GOMODCACHE=/root/.cache/go/gomodcache
@@ -12,8 +10,8 @@ COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/go go build -o cmd/gitea/gitea ./cmd/gitea
 
-# buildpack-deps:buster-scm - because we need ssh-keyscan
-FROM buildpack-deps@sha256:f010c9887ecea10d052247ef8befb79c2d17ea3f92ab6cb05039caab757fb14e
+# buildpack-deps:bullseye-scm - because for now we need ssh-keyscan
+FROM buildpack-deps@sha256:ae1f98a016484d09849a53b809f1a55e177f6c3cb7f6c78d4bd760d44e7dab69
 
 RUN mkdir /runbin
 

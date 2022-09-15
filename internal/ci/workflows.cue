@@ -7,8 +7,8 @@ workflows: [
 	{file: "test.yml", schema: test},
 ]
 
-_#latestGo:     "1.16.3"
-_#ubuntuLatest: "ubuntu-18.04"
+_#latestGo:     "1.19.1"
+_#ubuntuLatest: "ubuntu-22.04"
 
 test: json.#Workflow & {
 	name: "Test"
@@ -57,7 +57,8 @@ test: json.#Workflow & {
 			},
 			{
 				name: "Test"
-				run:  "CGO_ENABLED=0 go test ./..."
+				run:  "go test ./..."
+				env: CGO_ENABLED: "0"
 			},
 			{
 				name: "staticcheck"

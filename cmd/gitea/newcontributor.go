@@ -42,18 +42,22 @@ func (ncc *newContributorCmd) run(args []string) error {
 	user, _, err := client.AdminCreateUser(gitea.CreateUserOption{
 		Email:              *ncc.fEmail,
 		FullName:           *ncc.fFullName,
+		LoginName:          *ncc.fUsername,
 		MustChangePassword: &no,
 		Password:           password,
 		SendNotify:         false,
 		Username:           *ncc.fUsername,
+		SourceID:           0,
 	})
 	check(err, "failed to create new contributor %v: %v", *ncc.fUsername, err)
 
 	// Set further user options
 	_, err = client.AdminEditUser(user.UserName, gitea.EditUserOption{
-		Admin:    &yes,
-		Email:    user.Email,
-		FullName: user.FullName,
+		Admin:     &yes,
+		LoginName: user.UserName,
+		Email:     &user.Email,
+		FullName:  &user.FullName,
+		SourceID:  0,
 	})
 	check(err, "failed to edit contributor %v: %v", user.UserName, err)
 

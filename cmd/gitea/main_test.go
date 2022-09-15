@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -124,7 +124,7 @@ func TestEverything(t *testing.T) {
 
 	tr.mustRunDockerCompose("exec", "-T", "-u", "git", "gitea", "gitea", "migrate")
 
-	tr.mustRunDockerCompose("exec", "-T", "-u", "git", "gitea", "gitea", "admin", "create-user", "--admin",
+	tr.mustRunDockerCompose("exec", "-T", "-u", "git", "gitea", "gitea", "admin", "user", "create", "--admin",
 		"--username", os.Getenv("PLAYWITHGODEV_ROOT_USER"),
 		"--password", os.Getenv("PLAYWITHGODEV_ROOT_PASSWORD"),
 		"--email", "blah@blah.com",
@@ -204,7 +204,7 @@ func prestepErr() (err error) {
 	resp, err := http.Post(newuserURL, "application/json", args)
 	check(err, "failed to post to %v: %v", newuserURL, err)
 	defer resp.Body.Close()
-	newuser, err := ioutil.ReadAll(resp.Body)
+	newuser, err := io.ReadAll(resp.Body)
 	check(err, "failed to read newuser response: %v", err)
 	if resp.StatusCode/100 != 2 {
 		raise("newuser request not successful with code %v: %s", resp.StatusCode, newuser)
