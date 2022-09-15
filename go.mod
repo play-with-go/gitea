@@ -5,9 +5,9 @@ go 1.18
 require (
 	code.gitea.io/sdk/gitea v0.15.1
 	cuelang.org/go v0.4.3
-	github.com/kr/pretty v0.2.1
+	github.com/kr/pretty v0.3.0
 	github.com/myitcv/docker-compose v0.0.0-20200623052903-c60483a3250f
-	github.com/play-with-go/preguide v0.0.2-0.20220915142816-62d409205b6d
+	github.com/play-with-go/preguide v0.0.2-0.20220915151419-78bc6774e5a4
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	gopkg.in/retry.v1 v1.0.3
 	honnef.co/go/tools v0.3.3
@@ -27,13 +27,14 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/protocolbuffers/txtpbfmt v0.0.0-20201118171849-f6a6b3f636fc // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/spf13/cobra v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.11-0.20220513221640-090b14e8501f // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
