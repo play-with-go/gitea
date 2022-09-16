@@ -43,6 +43,10 @@ func (sc *serveCmd) run(args []string) error {
 	if !ok {
 		raise("failed to get debug build info")
 	}
+	// The build settings for this endpoint are not relevant
+	// information for the version we report to consumers.
+	// Zero them out
+	buildInfo.Settings = nil
 	buildInfoJSON, err := json.MarshalIndent(buildInfo, "", "  ")
 	check(err, "failed to JSON marshal build info: %v", err)
 
