@@ -47,8 +47,8 @@ github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e h1:aoZm08cpOy4WuID//EZDgc
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-github.com/play-with-go/preguide v0.0.2-0.20220915191537-3d53e5c0b0fa h1:cxKj/IQHSedaq26EzaIaAgtHEl3oEiKXXHitG8RcxpY=
-github.com/play-with-go/preguide v0.0.2-0.20220915191537-3d53e5c0b0fa/go.mod h1:OiZEQ1+V6HA/Wh4koKxDn8EIFPWTpcylWyzKJ9CTIGY=
+github.com/play-with-go/preguide v0.0.2-0.20220916045313-f81d11764005 h1:TozvtuERGrcqQhYM4thrishUY+QONu76GMskVpgQHBA=
+github.com/play-with-go/preguide v0.0.2-0.20220916045313-f81d11764005/go.mod h1:OiZEQ1+V6HA/Wh4koKxDn8EIFPWTpcylWyzKJ9CTIGY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/protocolbuffers/txtpbfmt v0.0.0-20201118171849-f6a6b3f636fc h1:gSVONBi2HWMFXCa9jFdYvYk7IwW/mTLxWOF7rXS4LO0=
