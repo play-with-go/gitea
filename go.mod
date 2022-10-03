@@ -7,7 +7,7 @@ require (
 	cuelang.org/go v0.4.3
 	github.com/kr/pretty v0.3.0
 	github.com/myitcv/docker-compose v0.0.0-20200623052903-c60483a3250f
-	github.com/play-with-go/preguide v0.0.2-0.20220916045313-f81d11764005
+	github.com/play-with-go/preguide v0.0.2-0.20221003163450-4d67fd2f2600
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	gopkg.in/retry.v1 v1.0.3
 	honnef.co/go/tools v0.3.3
